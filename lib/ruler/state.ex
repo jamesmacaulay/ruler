@@ -2,8 +2,8 @@ defmodule Ruler.State do
   defstruct facts: MapSet.new(), rules: %{}, refs: Ruler.RefMap.new()
 
   @type t :: %__MODULE__{
-          facts: MapSet.t(Ruler.Fact.t()),
-          rules: %{term => Ruler.Rule.t()},
+          facts: %{Ruler.Fact.t() => Ruler.FactInfo.t()},
+          rules: %{Ruler.Rule.id() => Ruler.Rule.t()},
           refs: Ruler.RefMap.t()
         }
 
@@ -41,7 +41,7 @@ defmodule Ruler.State do
     }
   end
 
-  @spec has_rule?(Ruler.State.t(), term) :: boolean
+  @spec has_rule?(Ruler.State.t(), Ruler.Rule.id()) :: boolean
   def has_rule?(_state = %__MODULE__{rules: rules}, id) do
     Map.has_key?(rules, id)
   end

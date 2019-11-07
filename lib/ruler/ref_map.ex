@@ -4,9 +4,10 @@
 defmodule Ruler.RefMap do
   defstruct storage: %{}, unused_indexes: []
 
+  @type ref :: non_neg_integer
   @opaque t(a) :: %__MODULE__{
-            storage: %{optional(non_neg_integer()) => a},
-            unused_indexes: [non_neg_integer()]
+            storage: %{optional(Ruler.RefMap.ref()) => a},
+            unused_indexes: [Ruler.RefMap.ref()]
           }
   @opaque t :: t(any())
 
@@ -15,7 +16,7 @@ defmodule Ruler.RefMap do
     %__MODULE__{}
   end
 
-  @spec insert(Ruler.RefMap.t(a), a) :: {Ruler.RefMap.t(a), non_neg_integer} when a: var
+  @spec insert(Ruler.RefMap.t(a), a) :: {Ruler.RefMap.t(a), Ruler.RefMap.ref()} when a: var
   def insert(refmap = %__MODULE__{storage: storage, unused_indexes: unused_indexes}, item) do
     case unused_indexes do
       [] ->
@@ -28,7 +29,7 @@ defmodule Ruler.RefMap do
     end
   end
 
-  @spec remove(Ruler.RefMap.t(a), non_neg_integer) :: Ruler.RefMap.t(a) when a: var
+  @spec remove(Ruler.RefMap.t(a), Ruler.RefMap.ref()) :: Ruler.RefMap.t(a) when a: var
   def remove(refmap = %__MODULE__{storage: storage, unused_indexes: unused_indexes}, index)
       when is_integer(index) and index >= 0 do
     max_index = Kernel.map_size(storage) + length(unused_indexes) - 1
@@ -43,21 +44,33 @@ defmodule Ruler.RefMap do
     end
   end
 
-  @spec get(Ruler.RefMap.t(a), non_neg_integer) :: a | nil when a: var
+  @spec get(Ruler.RefMap.t(a), Ruler.RefMap.ref()) :: a | nil when a: var
   def get(_refmap = %__MODULE__{storage: storage}, index)
       when is_integer(index) and index >= 0 do
     Map.get(storage, index)
   end
 
-  @spec fetch!(Ruler.RefMap.t(a), non_neg_integer) :: a when a: var
+  @spec fetch!(Ruler.RefMap.t(a), Ruler.RefMap.ref()) :: a when a: var
   def fetch!(_refmap = %__MODULE__{storage: storage}, index)
       when is_integer(index) and index >= 0 do
     Map.fetch!(storage, index)
   end
 
-  @spec update!(Ruler.RefMap.t(a), non_neg_integer, (a -> a)) :: Ruler.RefMap.t(a)
+  @spec update!(Ruler.RefMap.t(a), Ruler.RefMap.ref(), (a -> a)) :: Ruler.RefMap.t(a)
         when a: var
   def update!(refmap = %__MODULE__{storage: storage}, index, fun) do
     %{refmap | storage: Map.update!(storage, index, fun)}
+  end
+
+  @spec update_and_fetch!(Ruler.RefMap.t(a), Ruler.RefMap.ref(), (a -> a)) ::
+          {Ruler.RefMap.t(a), a}
+        when a: var
+  def update_and_fetch!(refmap = %__MODULE__{storage: storage}, index, fun) do
+    result = fun.(Map.fetch!(storage, index))
+
+    {%{
+       refmap
+       | storage: Map.put(storage, index, result)
+     }, result}
   end
 end

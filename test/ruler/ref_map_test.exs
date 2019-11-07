@@ -58,4 +58,17 @@ defmodule Ruler.RefMapTest do
       assert RefMap.update!(RefMap.new(), 0, &(&1 + 1))
     end
   end
+
+  test "update_and_fetch! existing item with function" do
+    {arena, index} = RefMap.insert(RefMap.new(), 100)
+    {arena, new_value} = RefMap.update_and_fetch!(arena, index, &(&1 + 1))
+    assert RefMap.get(arena, index) == 101
+    assert new_value == 101
+  end
+
+  test "update_and_fetch! item that isn't there" do
+    assert_raise KeyError, fn ->
+      assert RefMap.update_and_fetch!(RefMap.new(), 0, &(&1 + 1))
+    end
+  end
 end
