@@ -1,19 +1,29 @@
 defmodule Ruler.AlphaMemory do
+  alias Ruler.{
+    AlphaMemory,
+    Fact,
+    JoinNode,
+    RefMap,
+    State
+  }
+
   @enforce_keys [:facts, :join_nodes]
   defstruct [:facts, :join_nodes]
 
   @type t :: %__MODULE__{
-          facts: MapSet.t(Ruler.Fact.t()),
-          join_nodes: [Ruler.RefMap.ref()]
+          facts: MapSet.t(Fact.t()),
+          join_nodes: [JoinNode.ref()]
         }
+  @type ref :: RefMap.ref()
 
-  @spec activate(Ruler.State.t(), Ruler.RefMap.ref(), Ruler.Fact.t()) :: Ruler.State.t()
-  def activate(state = %Ruler.State{}, alpha_memory_ref, fact) do
+  @spec activate(State.t(), AlphaMemory.ref(), Fact.t()) ::
+          State.t()
+  def activate(state = %State{}, alpha_memory_ref, fact) do
     {refs, alpha_memory} =
-      Ruler.RefMap.update_and_fetch!(
+      RefMap.update_and_fetch!(
         state.refs,
         alpha_memory_ref,
-        fn alpha_memory = %Ruler.AlphaMemory{} ->
+        fn alpha_memory = %AlphaMemory{} ->
           %{
             alpha_memory
             | facts: MapSet.put(alpha_memory.facts, fact)
@@ -22,7 +32,7 @@ defmodule Ruler.AlphaMemory do
       )
 
     Enum.reduce(alpha_memory.join_nodes, %{state | refs: refs}, fn join_node_ref, state ->
-      Ruler.JoinNode.right_activate(state, join_node_ref, fact)
+      JoinNode.right_activate(state, join_node_ref, fact)
     end)
   end
 end

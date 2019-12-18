@@ -1,22 +1,33 @@
 defmodule Ruler.BetaMemory do
+  alias Ruler.{
+    BetaMemory,
+    Fact,
+    FactInfo,
+    JoinNode,
+    RefMap,
+    ReteNode,
+    State
+  }
+
   @enforce_keys [:parent, :children, :partial_activations]
   defstruct [:parent, :children, :partial_activations]
 
-  @type partial_activation :: [Ruler.Fact.t()]
+  @type partial_activation :: [Fact.t()]
   @type t :: %__MODULE__{
-          parent: Ruler.RefMap.ref(),
-          children: MapSet.t(Ruler.RefMap.ref()),
+          parent: ReteNode.ref(),
+          children: MapSet.t(ReteNode.ref()),
           partial_activations: MapSet.t(partial_activation)
         }
+  @type ref :: RefMap.ref()
 
   @spec left_activate(
-          Ruler.State.t(),
-          Ruler.RefMap.ref(),
-          Ruler.BetaMemory.partial_activation(),
-          Ruler.Fact.t()
-        ) :: Ruler.State.t()
+          State.t(),
+          BetaMemory.ref(),
+          BetaMemory.partial_activation(),
+          Fact.t()
+        ) :: State.t()
   def left_activate(
-        state = %Ruler.State{},
+        state = %State{},
         beta_memory_ref,
         partial_activation,
         fact
@@ -25,10 +36,10 @@ defmodule Ruler.BetaMemory do
 
     # add the new partial activation to the given beta memory in the state
     {refs, beta_memory} =
-      Ruler.RefMap.update_and_fetch!(
+      RefMap.update_and_fetch!(
         state.refs,
         beta_memory_ref,
-        fn beta_memory = %Ruler.BetaMemory{} ->
+        fn beta_memory = %BetaMemory{} ->
           %{
             beta_memory
             | partial_activations:
@@ -41,7 +52,7 @@ defmodule Ruler.BetaMemory do
     # to remember that this beta memory has a reference to that fact via this new partial activation
     facts =
       Enum.reduce(new_partial_activation, state.facts, fn fact, factmap ->
-        Map.update!(factmap, fact, fn fact_info = %Ruler.FactInfo{} ->
+        Map.update!(factmap, fact, fn fact_info = %FactInfo{} ->
           %{
             fact_info
             | partial_activations:
@@ -58,7 +69,7 @@ defmodule Ruler.BetaMemory do
       beta_memory.children,
       %{state | facts: facts, refs: refs},
       fn join_node_ref, state ->
-        Ruler.JoinNode.left_activate(state, join_node_ref, new_partial_activation)
+        JoinNode.left_activate(state, join_node_ref, new_partial_activation)
       end
     )
   end
