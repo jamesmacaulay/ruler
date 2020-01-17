@@ -2,8 +2,10 @@ defmodule Ruler.ReteNode do
   alias Ruler.{
     ActivationNode,
     BetaMemory,
+    Fact,
     JoinNode,
-    RefMap
+    RefMap,
+    State
   }
 
   # TODO: maybe change this to a protocol

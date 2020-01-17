@@ -1,5 +1,6 @@
 defmodule Ruler.JoinNode do
   alias Ruler.{
+    ActivationNode,
     AlphaMemory,
     BetaMemory,
     Fact,
@@ -16,7 +17,7 @@ defmodule Ruler.JoinNode do
           parent: BetaMemory.ref(),
           children: [ReteNode.ref()],
           alpha_memory: AlphaMemory.ref(),
-          comparisons: [Foo.t()]
+          comparisons: [Comparison.t()]
         }
   @type ref :: RefMap.ref()
 
@@ -51,7 +52,20 @@ defmodule Ruler.JoinNode do
         ) :: State.t()
   def left_activate(state = %State{}, join_node_ref, partial_activation) do
     # TODO
+
     state
+  end
+
+  @spec left_activate_child(State.t(), RefMap.ref(), BetaMemory.partial_activation(), Fact.t()) ::
+          State.t()
+  defp left_activate_child(state = %State{}, node_ref, partial_activation, fact) do
+    case RefMap.fetch!(state.refs, node_ref) do
+      %BetaMemory{} ->
+        BetaMemory.left_activate(state, node_ref, partial_activation, fact)
+
+      %ActivationNode{} ->
+        ActivationNode.left_activate(state, node_ref, partial_activation, fact)
+    end
   end
 
   # when a new fact is added to the alpha memory
@@ -60,8 +74,16 @@ defmodule Ruler.JoinNode do
   def right_activate(state = %State{}, join_node_ref, fact) do
     join_node = %JoinNode{} = RefMap.fetch!(state.refs, join_node_ref)
 
-    # fold join_node.parent.partial_activations into state by performing comparisons and left activations
-    state
+    # fold join_node.parent.partial_activations into init_state by performing comparisons and left activations
+    Enum.reduce(join_node.parent.partial_activations, state, fn partial_activation, state ->
+      if perform_join_comparisons(join_node.comparisons, partial_activation, fact) do
+        Enum.reduce(join_node.children, state, fn child_node_ref, state ->
+          left_activate_child(state, child_node_ref, partial_activation, fact)
+        end)
+      else
+        state
+      end
+    end)
   end
 
   @spec perform_join_comparisons(

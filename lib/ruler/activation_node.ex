@@ -1,9 +1,12 @@
 defmodule Ruler.ActivationNode do
   alias Ruler.{
+    ActivationNode,
+    BetaMemory,
     Fact,
     RefMap,
     ReteNode,
-    Rule
+    Rule,
+    State
   }
 
   @enforce_keys [:parent, :children, :rule, :activations]
@@ -18,4 +21,29 @@ defmodule Ruler.ActivationNode do
           activations: MapSet.t(activation)
         }
   @type ref :: RefMap.ref()
+
+  @spec left_activate(
+          State.t(),
+          ActivationNode.ref(),
+          BetaMemory.partial_activation(),
+          Fact.t()
+        ) :: State.t()
+  def left_activate(state = %State{}, activation_node_ref, partial_activation, fact) do
+    new_activation = [fact | partial_activation]
+    activation_node = %ActivationNode{} = RefMap.fetch!(state.refs, activation_node_ref)
+
+    refs =
+      RefMap.update!(
+        state.refs,
+        activation_node_ref,
+        fn activation_node = %ActivationNode{} ->
+          %{
+            activation_node
+            | activations: MapSet.put(activation_node.activations, new_activation)
+          }
+        end
+      )
+
+    %{state | refs: refs}
+  end
 end

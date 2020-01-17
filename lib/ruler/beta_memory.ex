@@ -15,7 +15,8 @@ defmodule Ruler.BetaMemory do
   @type partial_activation :: [Fact.t()]
   @type t :: %__MODULE__{
           parent: ReteNode.ref(),
-          children: MapSet.t(ReteNode.ref()),
+          children: MapSet.t(JoinNode.ref()),
+          # "items":
           partial_activations: MapSet.t(partial_activation)
         }
   @type ref :: RefMap.ref()
