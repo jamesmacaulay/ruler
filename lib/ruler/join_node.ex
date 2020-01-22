@@ -6,20 +6,21 @@ defmodule Ruler.JoinNode do
     Fact,
     JoinNode,
     RefMap,
-    ReteNode,
     State
   }
 
   @enforce_keys [:parent, :children, :alpha_memory, :comparisons]
   defstruct [:parent, :children, :alpha_memory, :comparisons]
 
+  @type ref :: RefMap.ref()
+  @type child_ref :: BetaMemory.ref() | ActivationNode.ref()
+
   @type t :: %__MODULE__{
           parent: BetaMemory.ref(),
-          children: [ReteNode.ref()],
+          children: [JoinNode.child_ref()],
           alpha_memory: AlphaMemory.ref(),
           comparisons: [Comparison.t()]
         }
-  @type ref :: RefMap.ref()
 
   defmodule Comparison do
     @enforce_keys [:arg1_field, :fact2_index, :arg2_field]
@@ -51,20 +52,51 @@ defmodule Ruler.JoinNode do
           BetaMemory.partial_activation()
         ) :: State.t()
   def left_activate(state = %State{}, join_node_ref, partial_activation) do
-    # TODO
+    join_node = %JoinNode{} = RefMap.fetch!(state.refs, join_node_ref)
+    alpha_memory = %AlphaMemory{} = RefMap.fetch!(state.refs, join_node.alpha_memory_ref)
 
-    state
+    Enum.reduce(alpha_memory.facts, state, fn fact, state ->
+      compare_and_activate_children(state, join_node, partial_activation, fact)
+    end)
   end
 
-  @spec left_activate_child(State.t(), RefMap.ref(), BetaMemory.partial_activation(), Fact.t()) ::
+  # JoinNode.t() prevents type checking in left_activate
+  #
+  # @spec compare_and_activate_children(
+  #         Ruler.State.t(),
+  #         JoinNode.t(),
+  #         BetaMemory.partial_activation(),
+  #         Fact.t()
+  #       ) :: State.t()
+  def compare_and_activate_children(
+        state = %State{},
+        join_node = %JoinNode{},
+        partial_activation,
+        fact
+      ) do
+    if perform_join_comparisons(join_node.comparisons, partial_activation, fact) do
+      Enum.reduce(join_node.children, state, fn child_node_ref, state ->
+        left_activate_child(state, child_node_ref, partial_activation, fact)
+      end)
+    else
+      state
+    end
+  end
+
+  @spec left_activate_child(
+          State.t(),
+          JoinNode.child_ref(),
+          BetaMemory.partial_activation(),
+          Fact.t()
+        ) ::
           State.t()
-  defp left_activate_child(state = %State{}, node_ref, partial_activation, fact) do
-    case RefMap.fetch!(state.refs, node_ref) do
+  defp left_activate_child(state = %State{}, child_ref, partial_activation, fact) do
+    case RefMap.fetch!(state.refs, child_ref) do
       %BetaMemory{} ->
-        BetaMemory.left_activate(state, node_ref, partial_activation, fact)
+        BetaMemory.left_activate(state, child_ref, partial_activation, fact)
 
       %ActivationNode{} ->
-        ActivationNode.left_activate(state, node_ref, partial_activation, fact)
+        ActivationNode.left_activate(state, child_ref, partial_activation, fact)
     end
   end
 
@@ -76,13 +108,7 @@ defmodule Ruler.JoinNode do
 
     # fold join_node.parent.partial_activations into init_state by performing comparisons and left activations
     Enum.reduce(join_node.parent.partial_activations, state, fn partial_activation, state ->
-      if perform_join_comparisons(join_node.comparisons, partial_activation, fact) do
-        Enum.reduce(join_node.children, state, fn child_node_ref, state ->
-          left_activate_child(state, child_node_ref, partial_activation, fact)
-        end)
-      else
-        state
-      end
+      compare_and_activate_children(state, join_node, partial_activation, fact)
     end)
   end
 

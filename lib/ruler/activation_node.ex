@@ -3,20 +3,18 @@ defmodule Ruler.ActivationNode do
     ActivationNode,
     BetaMemory,
     Fact,
+    JoinNode,
     RefMap,
-    ReteNode,
     Rule,
     State
   }
 
-  @enforce_keys [:parent, :children, :rule, :activations]
-  defstruct [:parent, :children, :rule, :activations]
+  @enforce_keys [:parent, :rule, :activations]
+  defstruct [:parent, :rule, :activations]
 
   @type activation :: [Fact.t()]
   @type t :: %__MODULE__{
-          parent: ReteNode.ref(),
-          # empty list type because never any children?
-          children: [ReteNode.ref()],
+          parent: JoinNode.ref(),
           rule: Rule.id(),
           activations: MapSet.t(activation)
         }
