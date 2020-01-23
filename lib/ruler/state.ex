@@ -1,18 +1,30 @@
 defmodule Ruler.State do
   alias Ruler.{
+    ActivationNode,
+    AlphaMemory,
+    BetaMemory,
     Fact,
     FactInfo,
+    JoinNode,
     RefMap,
     Rule,
     State
   }
 
-  defstruct facts: MapSet.new(), rules: %{}, refs: RefMap.new()
+  defstruct facts: %{},
+            rules: %{},
+            alpha_memories: RefMap.new(),
+            beta_memories: RefMap.new(),
+            join_nodes: RefMap.new(),
+            activation_nodes: RefMap.new()
 
   @type t :: %__MODULE__{
           facts: %{Fact.t() => FactInfo.t()},
           rules: %{Rule.id() => Rule.t()},
-          refs: RefMap.t()
+          alpha_memories: RefMap.t(AlphaMemory.t()),
+          beta_memories: RefMap.t(BetaMemory.t()),
+          join_nodes: RefMap.t(JoinNode.t()),
+          activation_nodes: RefMap.t(ActivationNode.t())
         }
 
   @spec new :: State.t()
@@ -23,7 +35,7 @@ defmodule Ruler.State do
   @spec add_fact(State.t(), Fact.t()) :: {State.t(), {[], []}}
   def add_fact(state = %__MODULE__{facts: facts}, fact) do
     {
-      %{state | facts: MapSet.put(facts, fact)},
+      %{state | facts: Map.put(facts, fact, FactInfo.new())},
       {[], []}
     }
   end
@@ -31,14 +43,14 @@ defmodule Ruler.State do
   @spec remove_fact(State.t(), Fact.t()) :: {State.t(), {[], []}}
   def remove_fact(state = %__MODULE__{facts: facts}, fact) do
     {
-      %{state | facts: MapSet.delete(facts, fact)},
+      %{state | facts: Map.delete(facts, fact)},
       {[], []}
     }
   end
 
   @spec has_fact?(State.t(), Fact.t()) :: boolean
   def has_fact?(_state = %__MODULE__{facts: facts}, fact) do
-    MapSet.member?(facts, fact)
+    Map.has_key?(facts, fact)
   end
 
   @spec add_rule(State.t(), Rule.t()) :: {State.t(), {[], []}}

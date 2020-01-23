@@ -18,7 +18,7 @@ defmodule Ruler.BetaMemory do
           # "items":
           partial_activations: MapSet.t(partial_activation)
         }
-  @type ref :: RefMap.ref()
+  @type ref :: {:beta_memory_ref, RefMap.ref()}
 
   @spec left_activate(
           State.t(),
@@ -28,17 +28,17 @@ defmodule Ruler.BetaMemory do
         ) :: State.t()
   def left_activate(
         state = %State{},
-        beta_memory_ref,
+        beta_memory_ref = {:beta_memory_ref, inner_beta_memory_ref},
         partial_activation,
         fact
       ) do
     new_partial_activation = [fact | partial_activation]
 
     # add the new partial activation to the given beta memory in the state
-    {refs, beta_memory} =
+    {beta_memories, beta_memory} =
       RefMap.update_and_fetch!(
-        state.refs,
-        beta_memory_ref,
+        state.beta_memories,
+        inner_beta_memory_ref,
         fn beta_memory = %BetaMemory{} ->
           %{
             beta_memory
@@ -67,7 +67,7 @@ defmodule Ruler.BetaMemory do
     # for each child join node of the beta memory, perform a left activation, and return the final state
     Enum.reduce(
       beta_memory.children,
-      %{state | facts: facts, refs: refs},
+      %{state | facts: facts, beta_memories: beta_memories},
       fn join_node_ref, state ->
         JoinNode.left_activate(state, join_node_ref, new_partial_activation)
       end

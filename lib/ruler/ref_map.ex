@@ -4,7 +4,7 @@
 defmodule Ruler.RefMap do
   defstruct storage: %{}, unused_indexes: []
 
-  @type ref :: non_neg_integer
+  @type ref :: non_neg_integer()
   @opaque t(a) :: %__MODULE__{
             storage: %{optional(Ruler.RefMap.ref()) => a},
             unused_indexes: [Ruler.RefMap.ref()]

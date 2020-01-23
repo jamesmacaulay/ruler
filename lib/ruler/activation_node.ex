@@ -18,7 +18,7 @@ defmodule Ruler.ActivationNode do
           rule: Rule.id(),
           activations: MapSet.t(activation)
         }
-  @type ref :: RefMap.ref()
+  @type ref :: {:activation_node_ref, RefMap.ref()}
 
   @spec left_activate(
           State.t(),
@@ -26,14 +26,18 @@ defmodule Ruler.ActivationNode do
           BetaMemory.partial_activation(),
           Fact.t()
         ) :: State.t()
-  def left_activate(state = %State{}, activation_node_ref, partial_activation, fact) do
+  def left_activate(
+        state = %State{},
+        {:activation_node_ref, inner_activation_node_ref},
+        partial_activation,
+        fact
+      ) do
     new_activation = [fact | partial_activation]
-    activation_node = %ActivationNode{} = RefMap.fetch!(state.refs, activation_node_ref)
 
-    refs =
+    activation_nodes =
       RefMap.update!(
-        state.refs,
-        activation_node_ref,
+        state.activation_nodes,
+        inner_activation_node_ref,
         fn activation_node = %ActivationNode{} ->
           %{
             activation_node
@@ -42,6 +46,6 @@ defmodule Ruler.ActivationNode do
         end
       )
 
-    %{state | refs: refs}
+    %{state | activation_nodes: activation_nodes}
   end
 end
