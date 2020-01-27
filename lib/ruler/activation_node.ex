@@ -1,7 +1,9 @@
 defmodule Ruler.ActivationNode do
   alias Ruler.{
+    Activation,
     ActivationNode,
     BetaMemory,
+    Condition,
     Fact,
     JoinNode,
     RefMap,
@@ -12,11 +14,10 @@ defmodule Ruler.ActivationNode do
   @enforce_keys [:parent, :rule, :activations]
   defstruct [:parent, :rule, :activations]
 
-  @type activation :: [Fact.t()]
   @type t :: %__MODULE__{
           parent: JoinNode.ref(),
           rule: Rule.id(),
-          activations: MapSet.t(activation)
+          activations: MapSet.t(Activation.t())
         }
   @type ref :: {:activation_node_ref, RefMap.ref()}
 
@@ -32,7 +33,26 @@ defmodule Ruler.ActivationNode do
         partial_activation,
         fact
       ) do
-    new_activation = [fact | partial_activation]
+    # new_activation = [fact | partial_activation]
+
+    rule_id = RefMap.fetch!(state.activation_nodes, inner_activation_node_ref).rule
+    fact_stack = [fact | partial_activation]
+    facts = Enum.reverse(fact_stack)
+    rule = Map.fetch!(state.rules, rule_id)
+
+    bindings =
+      Enum.zip(facts, rule.conditions)
+      |> Enum.reduce(%{}, fn {fact, condition}, bindings ->
+        Map.merge(bindings, Condition.bindings(condition, fact))
+      end)
+
+    new_activation = %Activation{
+      rule_id: rule_id,
+      facts: facts,
+      bindings: bindings
+    }
+
+    event = {:add_activation, new_activation}
 
     activation_nodes =
       RefMap.update!(
@@ -46,6 +66,10 @@ defmodule Ruler.ActivationNode do
         end
       )
 
-    %{state | activation_nodes: activation_nodes}
+    %{
+      state
+      | activation_nodes: activation_nodes,
+        latest_activation_events: [event | state.latest_activation_events]
+    }
   end
 end

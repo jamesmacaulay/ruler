@@ -7,18 +7,56 @@ defmodule Ruler.Condition do
 
   @type t :: {test, test, test}
 
+  @spec const?(test) :: boolean
+  defp const?({:const, _}), do: true
+  defp const?({:var, _}), do: false
+
+  @spec var?(test) :: boolean
+  defp var?({:const, _}), do: false
+  defp var?({:var, _}), do: true
+
   @spec nil_if_not_const(test) :: {:const, term} | nil
-  def nil_if_not_const(test) do
-    if match?({:const, _}, test) do
+  defp nil_if_not_const(test) do
+    if const?(test) do
       test
     else
       nil
     end
   end
 
-  @spec constants({test, test, test}) ::
+  @spec constants_and_nils(t) ::
           {nil | constant, nil | constant, nil | constant}
-  def constants({id, attr, val}) do
+  def constants_and_nils({id, attr, val}) do
     {nil_if_not_const(id), nil_if_not_const(attr), nil_if_not_const(val)}
+  end
+
+  @spec constant_tests(t) :: [{Fact.field_index(), term()}]
+  def constant_tests({id, attr, val}) do
+    [{0, id}, {1, attr}, {2, val}]
+    |> Enum.filter(fn {_, f} -> const?(f) end)
+    |> Enum.map(fn {i, {:const, x}} -> {i, x} end)
+  end
+
+  @spec indexed_variables(t) :: [{Fact.field_index(), variable_name()}]
+  def indexed_variables({id, attr, val}) do
+    [{0, id}, {1, attr}, {2, val}]
+    |> Enum.filter(fn {_, f} -> var?(f) end)
+    |> Enum.map(fn {i, {:var, x}} -> {i, x} end)
+  end
+
+  @spec constant_tests_match_fact?(t, Fact.t()) :: boolean
+  def constant_tests_match_fact?(condition, fact) do
+    constant_tests(condition)
+    |> Enum.all?(fn {field_index, constant_value} ->
+      elem(fact, field_index) == constant_value
+    end)
+  end
+
+  @spec bindings(Condition.t(), Fact.t()) :: %{required(variable_name()) => any()}
+  def bindings(condition, fact) do
+    indexed_variables(condition)
+    |> Enum.reduce(%{}, fn {field_index, variable_name}, binding_map ->
+      Map.put(binding_map, variable_name, elem(fact, field_index))
+    end)
   end
 end

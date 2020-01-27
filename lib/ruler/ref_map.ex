@@ -6,7 +6,7 @@ defmodule Ruler.RefMap do
 
   @type ref :: non_neg_integer()
   @opaque t(a) :: %__MODULE__{
-            storage: %{optional(Ruler.RefMap.ref()) => a},
+            storage: %{required(Ruler.RefMap.ref()) => a},
             unused_indexes: [Ruler.RefMap.ref()]
           }
   @opaque t :: t(any())
@@ -14,6 +14,12 @@ defmodule Ruler.RefMap do
   @spec new :: Ruler.RefMap.t()
   def new do
     %__MODULE__{}
+  end
+
+  @spec new(a) :: t(a) when a: var
+  def new(item) do
+    insert(%__MODULE__{}, item)
+    |> elem(0)
   end
 
   @spec insert(Ruler.RefMap.t(a), a) :: {Ruler.RefMap.t(a), Ruler.RefMap.ref()} when a: var

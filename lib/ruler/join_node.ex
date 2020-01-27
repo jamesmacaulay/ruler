@@ -3,6 +3,7 @@ defmodule Ruler.JoinNode do
     ActivationNode,
     AlphaMemory,
     BetaMemory,
+    Condition,
     Fact,
     JoinNode,
     RefMap,
@@ -43,6 +44,89 @@ defmodule Ruler.JoinNode do
       arg2 = elem(fact2, comparison.arg2_field)
       arg1 == arg2
     end
+  end
+
+  @spec build_or_share(State.t(), BetaMemory.ref(), AlphaMemory.ref(), [Comparison.t()]) ::
+          {State.t(), JoinNode.ref()}
+  def build_or_share(
+        state = %State{},
+        parent_ref = {:beta_memory_ref, inner_parent_ref},
+        alpha_memory_ref = {:alpha_memory_ref, inner_alpha_memory_ref},
+        comparisons
+      ) do
+    parent = RefMap.fetch!(state.beta_memories, inner_parent_ref)
+
+    suitable_child_ref =
+      Enum.find(parent.children, fn child_ref ->
+        case child_ref do
+          {:join_node_ref, inner_child_ref} ->
+            child = RefMap.fetch!(state.join_nodes, inner_child_ref)
+            child.alpha_memory == alpha_memory_ref && child.comparisons == comparisons
+
+          _ ->
+            false
+        end
+      end)
+
+    case suitable_child_ref do
+      {:join_node_ref, _} ->
+        {state, suitable_child_ref}
+
+      nil ->
+        new_join_node = %__MODULE__{
+          parent: parent_ref,
+          children: [],
+          alpha_memory: alpha_memory_ref,
+          comparisons: comparisons
+        }
+
+        {join_nodes, inner_new_join_node_ref} = RefMap.insert(state.join_nodes, new_join_node)
+        new_join_node_ref = {:join_node_ref, inner_new_join_node_ref}
+
+        alpha_memories =
+          RefMap.update!(state.alpha_memories, inner_alpha_memory_ref, fn alpha_memory ->
+            %{alpha_memory | join_nodes: [new_join_node_ref | alpha_memory.join_nodes]}
+          end)
+
+        state = %{state | join_nodes: join_nodes, alpha_memories: alpha_memories}
+        {state, new_join_node_ref}
+    end
+  end
+
+  @spec comparisons_from_condition(Condition.t(), [Condition.t()]) :: [Comparison.t()]
+  def comparisons_from_condition(condition, earlier_conditions) do
+    Condition.indexed_variables(condition)
+    |> Enum.reduce([], fn {field_index, variable_name}, result ->
+      matching_earlier_indexes =
+        earlier_conditions
+        |> Enum.with_index()
+        |> Enum.find_value(fn {earlier_condition, earlier_condition_index} ->
+          matching_earlier_indexed_variable =
+            earlier_condition
+            |> Condition.indexed_variables()
+            |> Enum.find(fn {_earlier_field_index, earlier_variable_name} ->
+              variable_name == earlier_variable_name
+            end)
+
+          with {earlier_field_index, _} <- matching_earlier_indexed_variable do
+            {earlier_condition_index, earlier_field_index}
+          end
+        end)
+
+      case matching_earlier_indexes do
+        nil ->
+          result
+
+        {earlier_condition_index, earlier_field_index} ->
+          comparison = %Comparison{
+            arg1_field: field_index,
+            fact2_index: earlier_condition_index,
+            arg2_field: earlier_field_index
+          }
+
+          [comparison | result]
+      end
+    end)
   end
 
   # when a new partial activation is added to the parent beta memory
@@ -104,8 +188,11 @@ defmodule Ruler.JoinNode do
   def right_activate(state = %State{}, {:join_node_ref, inner_join_node_ref}, fact) do
     join_node = %JoinNode{} = RefMap.fetch!(state.join_nodes, inner_join_node_ref)
 
-    # fold join_node.parent.partial_activations into init_state by performing comparisons and left activations
-    Enum.reduce(join_node.parent.partial_activations, state, fn partial_activation, state ->
+    {:beta_memory_ref, inner_parent_ref} = join_node.parent
+    parent = %BetaMemory{} = RefMap.fetch!(state.beta_memories, inner_parent_ref)
+
+    # fold parent.partial_activations into init_state by performing comparisons and left activations
+    Enum.reduce(parent.partial_activations, state, fn partial_activation, state ->
       compare_and_activate_children(state, join_node, partial_activation, fact)
     end)
   end
