@@ -73,7 +73,7 @@ defmodule Ruler.State do
 
   @spec add_rule(State.t(), Rule.t()) :: State.t()
   def add_rule(state = %State{}, rule) do
-    state = %{state | rules: Map.put(state.rules, rule.id, rule)}
+    state = %{state | rules: Map.put(state.rules, rule.id, rule), latest_activation_events: []}
     [first_condition | rest_conditions] = rule.conditions
     current_beta_memory_ref = state.beta_top_node
     earlier_conditions = []

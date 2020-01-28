@@ -22,6 +22,11 @@ defmodule Ruler.RefMap do
     |> elem(0)
   end
 
+  @spec keys(Ruler.RefMap.t()) :: [RefMap.ref()]
+  def keys(refmap = %__MODULE__{}) do
+    Map.keys(refmap.storage)
+  end
+
   @spec insert(Ruler.RefMap.t(a), a) :: {Ruler.RefMap.t(a), Ruler.RefMap.ref()} when a: var
   def insert(refmap = %__MODULE__{storage: storage, unused_indexes: unused_indexes}, item) do
     case unused_indexes do

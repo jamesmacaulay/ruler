@@ -33,8 +33,6 @@ defmodule Ruler.ActivationNode do
         partial_activation,
         fact
       ) do
-    # new_activation = [fact | partial_activation]
-
     rule_id = RefMap.fetch!(state.activation_nodes, inner_activation_node_ref).rule
     fact_stack = [fact | partial_activation]
     facts = Enum.reverse(fact_stack)

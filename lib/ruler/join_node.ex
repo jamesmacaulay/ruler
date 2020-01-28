@@ -88,7 +88,18 @@ defmodule Ruler.JoinNode do
             %{alpha_memory | join_nodes: [new_join_node_ref | alpha_memory.join_nodes]}
           end)
 
-        state = %{state | join_nodes: join_nodes, alpha_memories: alpha_memories}
+        beta_memories =
+          RefMap.update!(state.beta_memories, inner_parent_ref, fn beta_memory ->
+            %{beta_memory | children: MapSet.put(beta_memory.children, new_join_node_ref)}
+          end)
+
+        state = %{
+          state
+          | join_nodes: join_nodes,
+            alpha_memories: alpha_memories,
+            beta_memories: beta_memories
+        }
+
         {state, new_join_node_ref}
     end
   end
@@ -137,7 +148,9 @@ defmodule Ruler.JoinNode do
         ) :: State.t()
   def left_activate(state = %State{}, {:join_node_ref, inner_join_node_ref}, partial_activation) do
     join_node = %JoinNode{} = RefMap.fetch!(state.join_nodes, inner_join_node_ref)
-    alpha_memory = %AlphaMemory{} = RefMap.fetch!(state.alpha_memories, join_node.alpha_memory)
+
+    {:alpha_memory_ref, inner_alpha_memory_ref} = join_node.alpha_memory
+    alpha_memory = %AlphaMemory{} = RefMap.fetch!(state.alpha_memories, inner_alpha_memory_ref)
 
     Enum.reduce(alpha_memory.facts, state, fn fact, state ->
       compare_and_activate_children(state, join_node, partial_activation, fact)
