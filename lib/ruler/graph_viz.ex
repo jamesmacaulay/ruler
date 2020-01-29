@@ -37,8 +37,8 @@ defmodule Ruler.GraphViz do
       |> Enum.join("; ")
 
     beta_memory_edges =
-      Enum.reduce(beta_memory_refs, [], fn ref = {:beta_memory_ref, inner_ref}, result ->
-        beta_memory = RefMap.fetch!(state.beta_memories, inner_ref)
+      Enum.reduce(beta_memory_refs, [], fn ref = {:beta_memory_ref, _}, result ->
+        beta_memory = RefMap.fetch!(state.beta_memories, ref)
 
         beta_memory.children
         |> Enum.map(fn child_ref -> {ref, child_ref} end)
@@ -46,8 +46,8 @@ defmodule Ruler.GraphViz do
       end)
 
     join_node_edges =
-      Enum.reduce(join_node_refs, [], fn ref = {:join_node_ref, inner_ref}, result ->
-        join_node = RefMap.fetch!(state.join_nodes, inner_ref)
+      Enum.reduce(join_node_refs, [], fn ref = {:join_node_ref, _}, result ->
+        join_node = RefMap.fetch!(state.join_nodes, ref)
 
         join_node.children
         |> Enum.map(fn child_ref -> {ref, child_ref} end)
@@ -55,9 +55,8 @@ defmodule Ruler.GraphViz do
       end)
 
     constant_test_node_edges =
-      Enum.reduce(constant_test_node_refs, [], fn ref = {:constant_test_node_ref, inner_ref},
-                                                  result ->
-        constant_test_node = RefMap.fetch!(state.constant_test_nodes, inner_ref)
+      Enum.reduce(constant_test_node_refs, [], fn ref = {:constant_test_node_ref, _}, result ->
+        constant_test_node = RefMap.fetch!(state.constant_test_nodes, ref)
 
         children =
           if constant_test_node.alpha_memory == nil do
@@ -72,8 +71,8 @@ defmodule Ruler.GraphViz do
       end)
 
     alpha_memory_edges =
-      Enum.reduce(alpha_memory_refs, [], fn ref = {:alpha_memory_ref, inner_ref}, result ->
-        alpha_memory = RefMap.fetch!(state.alpha_memories, inner_ref)
+      Enum.reduce(alpha_memory_refs, [], fn ref = {:alpha_memory_ref, _}, result ->
+        alpha_memory = RefMap.fetch!(state.alpha_memories, ref)
 
         alpha_memory.join_nodes
         |> Enum.map(fn child_ref -> {ref, child_ref} end)

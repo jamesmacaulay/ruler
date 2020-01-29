@@ -2,86 +2,99 @@
 # When a new item is inserted into the RefMap, an ID is automatically generated for it.
 # This ID is used for subsequent fetches, updates, and removals.
 defmodule Ruler.RefMap do
-  defstruct storage: %{}, unused_indexes: []
+  alias Ruler.RefMap
 
-  @type ref :: non_neg_integer()
-  @opaque t(a) :: %__MODULE__{
-            storage: %{required(Ruler.RefMap.ref()) => a},
-            unused_indexes: [Ruler.RefMap.ref()]
+  @enforce_keys [:tag]
+  defstruct [:tag, storage: %{}, unused_keys: []]
+
+  @type index :: non_neg_integer()
+  @type ref(tag) :: {tag, index}
+  @opaque t(tag, val) :: %__MODULE__{
+            tag: tag,
+            storage: %{required(RefMap.ref(tag)) => val},
+            unused_keys: [RefMap.ref(tag)]
           }
-  @opaque t :: t(any())
 
-  @spec new :: Ruler.RefMap.t()
-  def new do
-    %__MODULE__{}
+  @spec new(tag) :: RefMap.t(tag, any()) when tag: atom()
+  def new(tag) do
+    %__MODULE__{tag: tag}
   end
 
-  @spec new(a) :: t(a) when a: var
-  def new(item) do
-    insert(%__MODULE__{}, item)
+  @spec new(tag, val) :: RefMap.t(tag, val) when tag: atom(), val: var
+  def new(tag, item) do
+    insert(%__MODULE__{tag: tag}, item)
     |> elem(0)
   end
 
-  @spec keys(Ruler.RefMap.t()) :: [RefMap.ref()]
-  def keys(refmap = %__MODULE__{}) do
+  @spec keys(RefMap.t(tag, any())) :: [RefMap.ref(tag)] when tag: atom()
+  def keys(refmap = %RefMap{}) do
     Map.keys(refmap.storage)
   end
 
-  @spec insert(Ruler.RefMap.t(a), a) :: {Ruler.RefMap.t(a), Ruler.RefMap.ref()} when a: var
-  def insert(refmap = %__MODULE__{storage: storage, unused_indexes: unused_indexes}, item) do
-    case unused_indexes do
+  @spec insert(RefMap.t(tag, val), val) :: {RefMap.t(tag, val), RefMap.ref(tag)}
+        when tag: atom(), val: var
+  def insert(refmap = %RefMap{}, item) do
+    case refmap.unused_keys do
       [] ->
-        new_index = Kernel.map_size(storage)
-        {%{refmap | storage: Map.put(storage, new_index, item)}, new_index}
+        next_key = {refmap.tag, Kernel.map_size(refmap.storage)}
+        {%{refmap | storage: Map.put(refmap.storage, next_key, item)}, next_key}
 
-      [new_index | remaining] ->
-        {%{refmap | storage: Map.put(storage, new_index, item), unused_indexes: remaining},
-         new_index}
+      [next_key | remaining] ->
+        {%{refmap | storage: Map.put(refmap.storage, next_key, item), unused_keys: remaining},
+         next_key}
     end
   end
 
-  @spec remove(Ruler.RefMap.t(a), Ruler.RefMap.ref()) :: Ruler.RefMap.t(a) when a: var
-  def remove(refmap = %__MODULE__{storage: storage, unused_indexes: unused_indexes}, index)
+  @spec remove(RefMap.t(tag, val), RefMap.ref(tag)) :: RefMap.t(tag, val)
+        when tag: atom(), val: var
+  def remove(refmap = %RefMap{}, ref = {tag, index})
       when is_integer(index) and index >= 0 do
-    max_index = Kernel.map_size(storage) + length(unused_indexes) - 1
-    new_storage = Map.delete(storage, index)
+    ^tag = refmap.tag
+    max_index = Kernel.map_size(refmap.storage) + length(refmap.unused_keys) - 1
+    new_storage = Map.delete(refmap.storage, ref)
 
     case index do
       ^max_index ->
         %{refmap | storage: new_storage}
 
       _ when index < max_index ->
-        %{refmap | storage: new_storage, unused_indexes: [index | unused_indexes]}
+        %{refmap | storage: new_storage, unused_keys: [ref | refmap.unused_keys]}
     end
   end
 
-  @spec get(Ruler.RefMap.t(a), Ruler.RefMap.ref()) :: a | nil when a: var
-  def get(_refmap = %__MODULE__{storage: storage}, index)
+  @spec get(RefMap.t(tag, val), RefMap.ref(tag)) :: val | nil when tag: atom(), val: var
+  def get(refmap = %RefMap{}, ref = {tag, index})
       when is_integer(index) and index >= 0 do
-    Map.get(storage, index)
+    ^tag = refmap.tag
+    Map.get(refmap.storage, ref)
   end
 
-  @spec fetch!(Ruler.RefMap.t(a), Ruler.RefMap.ref()) :: a when a: var
-  def fetch!(_refmap = %__MODULE__{storage: storage}, index)
+  @spec fetch!(RefMap.t(tag, val), RefMap.ref(tag)) :: val when tag: atom(), val: var
+  def fetch!(refmap = %RefMap{}, ref = {tag, index})
       when is_integer(index) and index >= 0 do
-    Map.fetch!(storage, index)
+    ^tag = refmap.tag
+    Map.fetch!(refmap.storage, ref)
   end
 
-  @spec update!(Ruler.RefMap.t(a), Ruler.RefMap.ref(), (a -> a)) :: Ruler.RefMap.t(a)
-        when a: var
-  def update!(refmap = %__MODULE__{storage: storage}, index, fun) do
-    %{refmap | storage: Map.update!(storage, index, fun)}
+  @spec update!(RefMap.t(tag, val), RefMap.ref(tag), (val -> val)) :: RefMap.t(tag, val)
+        when tag: atom(), val: var
+  def update!(refmap = %RefMap{}, ref = {tag, index}, fun)
+      when is_integer(index) and index >= 0 do
+    ^tag = refmap.tag
+    %{refmap | storage: Map.update!(refmap.storage, ref, fun)}
   end
 
-  @spec update_and_fetch!(Ruler.RefMap.t(a), Ruler.RefMap.ref(), (a -> a)) ::
-          {Ruler.RefMap.t(a), a}
-        when a: var
-  def update_and_fetch!(refmap = %__MODULE__{storage: storage}, index, fun) do
-    result = fun.(Map.fetch!(storage, index))
+  @spec update_and_fetch!(RefMap.t(tag, val), RefMap.ref(tag), (val -> val)) ::
+          {RefMap.t(tag, val), val}
+        when tag: atom(), val: var
+  def update_and_fetch!(refmap = %RefMap{}, ref = {tag, index}, fun)
+      when is_integer(index) and index >= 0 do
+    ^tag = refmap.tag
+    result = fun.(Map.fetch!(refmap.storage, ref))
 
     {%{
        refmap
-       | storage: Map.put(storage, index, result)
+       | storage: Map.put(refmap.storage, ref, result)
      }, result}
   end
 end

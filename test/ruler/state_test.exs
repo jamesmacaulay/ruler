@@ -1,6 +1,6 @@
 defmodule Ruler.StateTest do
   use ExUnit.Case
-  alias Ruler.{GraphViz, Rule, State}
+  alias Ruler.{Rule, State}
   doctest Ruler.State
 
   test "add_fact, remove_fact, has_fact? updates and reads from state" do

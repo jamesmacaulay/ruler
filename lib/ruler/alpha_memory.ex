@@ -30,8 +30,8 @@ defmodule Ruler.AlphaMemory do
         ConstantTestNode.build_or_share(state, current_node_ref, field_index, constant_value)
       end)
 
-    {:constant_test_node_ref, inner_current_node_ref} = current_node_ref
-    current_node = RefMap.fetch!(state.constant_test_nodes, inner_current_node_ref)
+    current_node_ref = {:constant_test_node_ref, _} = current_node_ref
+    current_node = RefMap.fetch!(state.constant_test_nodes, current_node_ref)
 
     case current_node.alpha_memory do
       alpha_memory_ref = {:alpha_memory_ref, _} ->
@@ -40,17 +40,14 @@ defmodule Ruler.AlphaMemory do
       nil ->
         alpha_memory = %__MODULE__{}
 
-        {alpha_memories, inner_alpha_memory_ref} =
-          RefMap.insert(state.alpha_memories, alpha_memory)
-
-        alpha_memory_ref = {:alpha_memory_ref, inner_alpha_memory_ref}
+        {alpha_memories, alpha_memory_ref} = RefMap.insert(state.alpha_memories, alpha_memory)
 
         state = %{state | alpha_memories: alpha_memories}
 
         constant_test_nodes =
           RefMap.update!(
             state.constant_test_nodes,
-            inner_current_node_ref,
+            current_node_ref,
             fn constant_test_node ->
               %{constant_test_node | alpha_memory: alpha_memory_ref}
             end
@@ -73,11 +70,11 @@ defmodule Ruler.AlphaMemory do
 
   @spec activate(State.t(), AlphaMemory.ref(), Fact.t()) ::
           State.t()
-  def activate(state = %State{}, {:alpha_memory_ref, inner_alpha_memory_ref}, fact) do
+  def activate(state = %State{}, alpha_memory_ref = {:alpha_memory_ref, _}, fact) do
     {alpha_memories, alpha_memory} =
       RefMap.update_and_fetch!(
         state.alpha_memories,
-        inner_alpha_memory_ref,
+        alpha_memory_ref,
         fn alpha_memory = %AlphaMemory{} ->
           %{
             alpha_memory

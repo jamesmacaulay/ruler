@@ -19,15 +19,15 @@ defmodule Ruler.ConstantTestNode do
           {State.t(), ConstantTestNode.ref()}
   def build_or_share(
         state,
-        {:constant_test_node_ref, inner_parent_ref},
+        parent_ref = {:constant_test_node_ref, _},
         field_index,
         constant_value
       ) do
-    parent = RefMap.fetch!(state.constant_test_nodes, inner_parent_ref)
+    parent = RefMap.fetch!(state.constant_test_nodes, parent_ref)
 
     suitable_child_ref =
-      Enum.find(parent.children, fn {:constant_test_node_ref, inner_child_ref} ->
-        child = RefMap.fetch!(state.constant_test_nodes, inner_child_ref)
+      Enum.find(parent.children, fn child_ref = {:constant_test_node_ref, _} ->
+        child = RefMap.fetch!(state.constant_test_nodes, child_ref)
         child.field == field_index && child.target_value == constant_value
       end)
 
@@ -43,13 +43,11 @@ defmodule Ruler.ConstantTestNode do
           children: []
         }
 
-        {constant_test_nodes, inner_child_ref} = RefMap.insert(state.constant_test_nodes, child)
-
-        child_ref = {:constant_test_node_ref, inner_child_ref}
+        {constant_test_nodes, child_ref} = RefMap.insert(state.constant_test_nodes, child)
 
         constant_test_nodes =
           constant_test_nodes
-          |> RefMap.update!(inner_parent_ref, fn parent ->
+          |> RefMap.update!(parent_ref, fn parent ->
             %{parent | children: [child_ref | parent.children]}
           end)
 
@@ -61,10 +59,10 @@ defmodule Ruler.ConstantTestNode do
 
   def activate(
         state = %State{},
-        {:constant_test_node_ref, inner_constant_test_node_ref},
+        constant_test_node_ref = {:constant_test_node_ref, _},
         fact
       ) do
-    constant_test_node = RefMap.fetch!(state.constant_test_nodes, inner_constant_test_node_ref)
+    constant_test_node = RefMap.fetch!(state.constant_test_nodes, constant_test_node_ref)
     field_index = constant_test_node.field
 
     if field_index == nil || elem(fact, field_index) == constant_test_node.target_value do

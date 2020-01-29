@@ -16,21 +16,27 @@ defmodule Ruler.State do
   defstruct facts: %{},
             rules: %{},
             constant_test_nodes:
-              RefMap.new(%ConstantTestNode{
-                field: nil,
-                target_value: nil,
-                alpha_memory: nil,
-                children: []
-              }),
-            alpha_memories: RefMap.new(),
+              RefMap.new(
+                :constant_test_node_ref,
+                %ConstantTestNode{
+                  field: nil,
+                  target_value: nil,
+                  alpha_memory: nil,
+                  children: []
+                }
+              ),
+            alpha_memories: RefMap.new(:alpha_memory_ref),
             beta_memories:
-              RefMap.new(%BetaMemory{
-                parent: nil,
-                children: MapSet.new(),
-                partial_activations: MapSet.new([[]])
-              }),
-            join_nodes: RefMap.new(),
-            activation_nodes: RefMap.new(),
+              RefMap.new(
+                :beta_memory_ref,
+                %BetaMemory{
+                  parent: nil,
+                  children: MapSet.new(),
+                  partial_activations: MapSet.new([[]])
+                }
+              ),
+            join_nodes: RefMap.new(:join_node_ref),
+            activation_nodes: RefMap.new(:activation_node_ref),
             alpha_top_node: {:constant_test_node_ref, 0},
             beta_top_node: {:beta_memory_ref, 0},
             latest_activation_events: []
@@ -38,11 +44,11 @@ defmodule Ruler.State do
   @type t :: %__MODULE__{
           facts: %{Fact.t() => FactInfo.t()},
           rules: %{Rule.id() => Rule.t()},
-          constant_test_nodes: RefMap.t(ConstantTestNode.t()),
-          alpha_memories: RefMap.t(AlphaMemory.t()),
-          beta_memories: RefMap.t(BetaMemory.t()),
-          join_nodes: RefMap.t(JoinNode.t()),
-          activation_nodes: RefMap.t(ActivationNode.t()),
+          constant_test_nodes: RefMap.t(:constant_test_node_ref, ConstantTestNode.t()),
+          alpha_memories: RefMap.t(:alpha_memory_ref, AlphaMemory.t()),
+          beta_memories: RefMap.t(:beta_memory_ref, BetaMemory.t()),
+          join_nodes: RefMap.t(:join_node_ref, JoinNode.t()),
+          activation_nodes: RefMap.t(:activation_node_ref, ActivationNode.t()),
           alpha_top_node: ConstantTestNode.ref(),
           beta_top_node: BetaMemory.ref(),
           latest_activation_events: [Activation.activation_event()]
@@ -83,8 +89,7 @@ defmodule Ruler.State do
     {state, current_join_node_ref} =
       JoinNode.build_or_share(state, current_beta_memory_ref, alpha_memory_ref, comparisons)
 
-    {state, current_join_node_ref = {:join_node_ref, inner_current_join_node_ref},
-     _earlier_conditions} =
+    {state, current_join_node_ref = {:join_node_ref, _}, _} =
       Enum.reduce(
         rest_conditions,
         {state, current_join_node_ref, [first_condition]},
@@ -108,15 +113,13 @@ defmodule Ruler.State do
       activations: MapSet.new()
     }
 
-    {activation_nodes, inner_activation_node_ref} =
+    {activation_nodes, activation_node_ref} =
       RefMap.insert(state.activation_nodes, activation_node)
-
-    activation_node_ref = {:activation_node_ref, inner_activation_node_ref}
 
     state = %{state | activation_nodes: activation_nodes}
 
     join_nodes =
-      RefMap.update!(state.join_nodes, inner_current_join_node_ref, fn join_node ->
+      RefMap.update!(state.join_nodes, current_join_node_ref, fn join_node ->
         %{join_node | children: [activation_node_ref | join_node.children]}
       end)
 
