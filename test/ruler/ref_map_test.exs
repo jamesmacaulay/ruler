@@ -30,6 +30,16 @@ defmodule Ruler.RefMapTest do
     assert RefMap.get(RefMap.new(), 0) == nil
   end
 
+  test "list keys" do
+    refmap = RefMap.new()
+    {refmap, a_ref} = RefMap.insert(refmap, :a)
+    {refmap, b_ref} = RefMap.insert(refmap, :b)
+    {refmap, c_ref} = RefMap.insert(refmap, :c)
+    refmap = RefMap.remove(refmap, b_ref)
+
+    assert RefMap.keys(refmap) == [a_ref, c_ref]
+  end
+
   test "remove existing item" do
     {arena, index} = RefMap.insert(RefMap.new(), :foo)
     arena2 = RefMap.remove(arena, index)
