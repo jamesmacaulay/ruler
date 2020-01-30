@@ -1,16 +1,19 @@
 defmodule Ruler.State do
   alias Ruler.{
     Activation,
+    Fact,
+    Rule,
+    State
+  }
+
+  alias Ruler.State.{
     ActivationNode,
     AlphaMemory,
     BetaMemory,
     ConstantTestNode,
-    Fact,
     FactInfo,
     JoinNode,
-    RefMap,
-    Rule,
-    State
+    RefMap
   }
 
   defstruct facts: %{},

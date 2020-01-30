@@ -1,14 +1,17 @@
-defmodule Ruler.ActivationNode do
+defmodule Ruler.State.ActivationNode do
   alias Ruler.{
     Activation,
-    ActivationNode,
-    BetaMemory,
     Condition,
     Fact,
-    JoinNode,
-    RefMap,
     Rule,
     State
+  }
+
+  alias Ruler.State.{
+    ActivationNode,
+    BetaMemory,
+    JoinNode,
+    RefMap
   }
 
   @enforce_keys [:parent, :rule, :activations]

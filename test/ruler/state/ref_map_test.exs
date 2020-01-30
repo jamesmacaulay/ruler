@@ -1,7 +1,7 @@
-defmodule Ruler.RefMapTest do
+defmodule Ruler.State.RefMapTest do
   use ExUnit.Case
-  alias Ruler.RefMap
-  doctest Ruler.RefMap
+  alias Ruler.State.RefMap
+  doctest Ruler.State.RefMap
 
   test "insertions and removals at various indexes" do
     refmap = RefMap.new(:some_tag)

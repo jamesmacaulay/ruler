@@ -1,13 +1,16 @@
-defmodule Ruler.JoinNode do
+defmodule Ruler.State.JoinNode do
   alias Ruler.{
+    Condition,
+    Fact,
+    State
+  }
+
+  alias Ruler.State.{
     ActivationNode,
     AlphaMemory,
     BetaMemory,
-    Condition,
-    Fact,
     JoinNode,
-    RefMap,
-    State
+    RefMap
   }
 
   @enforce_keys [:parent, :children, :alpha_memory, :comparisons]

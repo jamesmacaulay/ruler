@@ -1,11 +1,14 @@
-defmodule Ruler.BetaMemory do
+defmodule Ruler.State.BetaMemory do
   alias Ruler.{
-    BetaMemory,
     Fact,
+    State
+  }
+
+  alias Ruler.State.{
+    BetaMemory,
     FactInfo,
     JoinNode,
-    RefMap,
-    State
+    RefMap
   }
 
   @enforce_keys [:parent, :children, :partial_activations]

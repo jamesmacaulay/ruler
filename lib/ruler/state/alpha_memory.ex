@@ -1,12 +1,15 @@
-defmodule Ruler.AlphaMemory do
+defmodule Ruler.State.AlphaMemory do
   alias Ruler.{
-    AlphaMemory,
     Condition,
-    ConstantTestNode,
     Fact,
-    JoinNode,
-    RefMap,
     State
+  }
+
+  alias Ruler.State.{
+    AlphaMemory,
+    ConstantTestNode,
+    JoinNode,
+    RefMap
   }
 
   defstruct facts: MapSet.new(), join_nodes: []

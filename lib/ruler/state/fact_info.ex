@@ -1,5 +1,5 @@
-defmodule Ruler.FactInfo do
-  alias Ruler.{
+defmodule Ruler.State.FactInfo do
+  alias Ruler.State.{
     BetaMemory,
     FactInfo
   }

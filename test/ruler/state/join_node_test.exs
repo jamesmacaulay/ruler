@@ -1,7 +1,7 @@
-defmodule Ruler.JoinNodeTest do
+defmodule Ruler.State.JoinNodeTest do
   use ExUnit.Case
-  alias Ruler.JoinNode
-  doctest Ruler.JoinNode
+  alias Ruler.State.JoinNode
+  doctest Ruler.State.JoinNode
 
   test "Comparison.perform returns true when specified field values are equal" do
     comparison = %JoinNode.Comparison{arg1_field: 2, fact2_index: 0, arg2_field: 2}

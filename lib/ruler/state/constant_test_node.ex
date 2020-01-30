@@ -1,5 +1,14 @@
-defmodule Ruler.ConstantTestNode do
-  alias Ruler.{AlphaMemory, ConstantTestNode, Fact, RefMap, State}
+defmodule Ruler.State.ConstantTestNode do
+  alias Ruler.{
+    Fact,
+    State
+  }
+
+  alias Ruler.State.{
+    AlphaMemory,
+    ConstantTestNode,
+    RefMap
+  }
 
   @enforce_keys [:field, :target_value, :alpha_memory, :children]
   defstruct [:field, :target_value, :alpha_memory, :children]

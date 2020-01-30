@@ -1,8 +1,8 @@
 # RefMap is an immutable data structure that emulates a bag of mutable references.
 # When a new item is inserted into the RefMap, an ID is automatically generated for it.
 # This ID is used for subsequent fetches, updates, and removals.
-defmodule Ruler.RefMap do
-  alias Ruler.RefMap
+defmodule Ruler.State.RefMap do
+  alias Ruler.State.RefMap
 
   @enforce_keys [:tag]
   defstruct [:tag, storage: %{}, unused_keys: []]
