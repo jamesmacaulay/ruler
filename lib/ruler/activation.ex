@@ -5,8 +5,9 @@ defmodule Ruler.Activation do
   @type t :: %__MODULE__{
           rule_id: Rule.id(),
           facts: [Fact.t()],
-          bindings: %{required(Condition.variable_name()) => any()}
+          bindings: bindings_map
         }
+  @type bindings_map :: %{required(Condition.variable_name()) => any()}
   @type add_activation_event :: {:add_activation, t}
   @type remove_activation_event :: {:remove_activation, t}
   @type activation_event :: add_activation_event | remove_activation_event

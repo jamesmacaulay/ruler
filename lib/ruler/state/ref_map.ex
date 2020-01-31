@@ -4,25 +4,25 @@
 defmodule Ruler.State.RefMap do
   alias Ruler.State.RefMap
 
-  @enforce_keys [:tag]
-  defstruct [:tag, storage: %{}, unused_keys: []]
+  @enforce_keys [:tag, :storage, :unused_keys]
+  defstruct [:tag, :storage, :unused_keys]
 
   @type index :: non_neg_integer()
   @type ref(tag) :: {tag, index}
-  @opaque t(tag, val) :: %__MODULE__{
-            tag: tag,
-            storage: %{required(RefMap.ref(tag)) => val},
-            unused_keys: [RefMap.ref(tag)]
-          }
+  @type t(tag, val) :: %__MODULE__{
+          tag: tag,
+          storage: %{required(RefMap.ref(tag)) => val},
+          unused_keys: [RefMap.ref(tag)]
+        }
 
   @spec new(tag) :: RefMap.t(tag, any()) when tag: atom()
   def new(tag) do
-    %__MODULE__{tag: tag}
+    %__MODULE__{tag: tag, storage: %{}, unused_keys: []}
   end
 
   @spec new(tag, val) :: RefMap.t(tag, val) when tag: atom(), val: var
   def new(tag, item) do
-    insert(%__MODULE__{tag: tag}, item)
+    insert(new(tag), item)
     |> elem(0)
   end
 

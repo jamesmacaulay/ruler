@@ -6,133 +6,75 @@ defmodule Ruler.State do
     State
   }
 
-  alias Ruler.State.{
-    ActivationNode,
-    AlphaMemory,
-    BetaMemory,
-    ConstantTestNode,
-    FactInfo,
-    JoinNode,
-    RefMap
-  }
-
-  defstruct facts: %{},
-            rules: %{},
-            constant_test_nodes:
-              RefMap.new(
-                :constant_test_node_ref,
-                %ConstantTestNode{
-                  field: nil,
-                  target_value: nil,
-                  alpha_memory: nil,
-                  children: []
-                }
-              ),
-            alpha_memories: RefMap.new(:alpha_memory_ref),
-            beta_memories:
-              RefMap.new(
-                :beta_memory_ref,
-                %BetaMemory{
-                  parent: nil,
-                  children: MapSet.new(),
-                  partial_activations: MapSet.new([[]])
-                }
-              ),
-            join_nodes: RefMap.new(:join_node_ref),
-            activation_nodes: RefMap.new(:activation_node_ref),
-            alpha_top_node: {:constant_test_node_ref, 0},
-            beta_top_node: {:beta_memory_ref, 0},
-            latest_activation_events: []
+  @enforce_keys [
+    :facts,
+    :rules,
+    :constant_test_nodes,
+    :alpha_memories,
+    :beta_memories,
+    :join_nodes,
+    :activation_nodes,
+    :alpha_top_node,
+    :beta_top_node,
+    :latest_activation_events
+  ]
+  defstruct [
+    :facts,
+    :rules,
+    :constant_test_nodes,
+    :alpha_memories,
+    :beta_memories,
+    :join_nodes,
+    :activation_nodes,
+    :alpha_top_node,
+    :beta_top_node,
+    :latest_activation_events
+  ]
 
   @type t :: %__MODULE__{
-          facts: %{Fact.t() => FactInfo.t()},
+          facts: %{Fact.t() => State.FactInfo.t()},
           rules: %{Rule.id() => Rule.t()},
-          constant_test_nodes: RefMap.t(:constant_test_node_ref, ConstantTestNode.t()),
-          alpha_memories: RefMap.t(:alpha_memory_ref, AlphaMemory.t()),
-          beta_memories: RefMap.t(:beta_memory_ref, BetaMemory.t()),
-          join_nodes: RefMap.t(:join_node_ref, JoinNode.t()),
-          activation_nodes: RefMap.t(:activation_node_ref, ActivationNode.t()),
-          alpha_top_node: ConstantTestNode.ref(),
-          beta_top_node: BetaMemory.ref(),
+          constant_test_nodes:
+            State.RefMap.t(:constant_test_node_ref, State.ConstantTestNode.t()),
+          alpha_memories: State.RefMap.t(:alpha_memory_ref, State.AlphaMemory.t()),
+          beta_memories: State.RefMap.t(:beta_memory_ref, State.BetaMemory.t()),
+          join_nodes: State.RefMap.t(:join_node_ref, State.JoinNode.t()),
+          activation_nodes: State.RefMap.t(:activation_node_ref, State.ActivationNode.t()),
+          alpha_top_node: State.ConstantTestNode.ref(),
+          beta_top_node: State.BetaMemory.ref(),
           latest_activation_events: [Activation.activation_event()]
         }
 
   @spec new :: State.t()
   def new do
-    %State{}
-  end
-
-  @spec add_fact(State.t(), Fact.t()) :: State.t()
-  def add_fact(state = %State{}, fact) do
-    facts = Map.put(state.facts, fact, FactInfo.new())
-
-    %{state | facts: facts}
-    |> ConstantTestNode.activate(state.alpha_top_node, fact)
-  end
-
-  @spec remove_fact(State.t(), Fact.t()) :: State.t()
-  def remove_fact(state = %State{}, fact) do
-    %{state | facts: Map.delete(state.facts, fact)}
-  end
-
-  @spec has_fact?(State.t(), Fact.t()) :: boolean
-  def has_fact?(state = %State{}, fact) do
-    Map.has_key?(state.facts, fact)
-  end
-
-  @spec add_rule(State.t(), Rule.t()) :: State.t()
-  def add_rule(state = %State{}, rule) do
-    state = %{state | rules: Map.put(state.rules, rule.id, rule), latest_activation_events: []}
-    [first_condition | rest_conditions] = rule.conditions
-    current_beta_memory_ref = state.beta_top_node
-    earlier_conditions = []
-    comparisons = JoinNode.comparisons_from_condition(first_condition, earlier_conditions)
-    {state, alpha_memory_ref} = AlphaMemory.build_or_share(state, first_condition)
-
-    {state, current_join_node_ref} =
-      JoinNode.build_or_share(state, current_beta_memory_ref, alpha_memory_ref, comparisons)
-
-    {state, current_join_node_ref = {:join_node_ref, _}, _} =
-      Enum.reduce(
-        rest_conditions,
-        {state, current_join_node_ref, [first_condition]},
-        fn condition, {state, current_join_node_ref, earlier_conditions} ->
-          {state, current_beta_memory_ref} =
-            BetaMemory.build_or_share(state, current_join_node_ref)
-
-          comparisons = JoinNode.comparisons_from_condition(condition, earlier_conditions)
-          {state, alpha_memory_ref} = AlphaMemory.build_or_share(state, condition)
-
-          {state, current_join_node_ref} =
-            JoinNode.build_or_share(state, current_beta_memory_ref, alpha_memory_ref, comparisons)
-
-          {state, current_join_node_ref, [condition | earlier_conditions]}
-        end
-      )
-
-    activation_node = %ActivationNode{
-      parent: current_join_node_ref,
-      rule: rule.id,
-      activations: MapSet.new()
+    %State{
+      facts: %{},
+      rules: %{},
+      constant_test_nodes:
+        State.RefMap.new(
+          :constant_test_node_ref,
+          %State.ConstantTestNode{
+            field: nil,
+            target_value: nil,
+            alpha_memory: nil,
+            children: []
+          }
+        ),
+      alpha_memories: State.RefMap.new(:alpha_memory_ref),
+      beta_memories:
+        State.RefMap.new(
+          :beta_memory_ref,
+          %State.BetaMemory{
+            parent: nil,
+            children: MapSet.new(),
+            partial_activations: MapSet.new([[]])
+          }
+        ),
+      join_nodes: State.RefMap.new(:join_node_ref),
+      activation_nodes: State.RefMap.new(:activation_node_ref),
+      alpha_top_node: {:constant_test_node_ref, 0},
+      beta_top_node: {:beta_memory_ref, 0},
+      latest_activation_events: []
     }
-
-    {activation_nodes, activation_node_ref} =
-      RefMap.insert(state.activation_nodes, activation_node)
-
-    state = %{state | activation_nodes: activation_nodes}
-
-    join_nodes =
-      RefMap.update!(state.join_nodes, current_join_node_ref, fn join_node ->
-        %{join_node | children: [activation_node_ref | join_node.children]}
-      end)
-
-    state = %{state | join_nodes: join_nodes}
-
-    BetaMemory.update_new_node_with_matches_from_above(state, activation_node_ref)
-  end
-
-  @spec has_rule?(State.t(), Rule.id()) :: boolean
-  def has_rule?(state = %State{}, id) do
-    Map.has_key?(state.rules, id)
   end
 end

@@ -1,21 +1,20 @@
 defmodule Ruler.GraphViz do
   alias Ruler.{
-    RefMap,
     State
   }
 
   @spec to_dot(State.t()) :: String.t()
   def to_dot(state) do
     beta_memory_refs =
-      RefMap.keys(state.beta_memories)
+      State.RefMap.keys(state.beta_memories)
       |> Enum.map(fn k -> {:beta_memory_ref, k} end)
 
     join_node_refs =
-      RefMap.keys(state.join_nodes)
+      State.RefMap.keys(state.join_nodes)
       |> Enum.map(fn k -> {:join_node_ref, k} end)
 
     activation_node_refs =
-      RefMap.keys(state.activation_nodes)
+      State.RefMap.keys(state.activation_nodes)
       |> Enum.map(fn k -> {:activation_node_ref, k} end)
 
     beta_nodes_declaration =
@@ -24,11 +23,11 @@ defmodule Ruler.GraphViz do
       |> Enum.join("; ")
 
     constant_test_node_refs =
-      RefMap.keys(state.constant_test_nodes)
+      State.RefMap.keys(state.constant_test_nodes)
       |> Enum.map(fn k -> {:constant_test_node_ref, k} end)
 
     alpha_memory_refs =
-      RefMap.keys(state.alpha_memories)
+      State.RefMap.keys(state.alpha_memories)
       |> Enum.map(fn k -> {:alpha_memory_ref, k} end)
 
     alpha_nodes_declaration =
@@ -38,7 +37,7 @@ defmodule Ruler.GraphViz do
 
     beta_memory_edges =
       Enum.reduce(beta_memory_refs, [], fn ref = {:beta_memory_ref, _}, result ->
-        beta_memory = RefMap.fetch!(state.beta_memories, ref)
+        beta_memory = State.RefMap.fetch!(state.beta_memories, ref)
 
         beta_memory.children
         |> Enum.map(fn child_ref -> {ref, child_ref} end)
@@ -47,7 +46,7 @@ defmodule Ruler.GraphViz do
 
     join_node_edges =
       Enum.reduce(join_node_refs, [], fn ref = {:join_node_ref, _}, result ->
-        join_node = RefMap.fetch!(state.join_nodes, ref)
+        join_node = State.RefMap.fetch!(state.join_nodes, ref)
 
         join_node.children
         |> Enum.map(fn child_ref -> {ref, child_ref} end)
@@ -56,7 +55,7 @@ defmodule Ruler.GraphViz do
 
     constant_test_node_edges =
       Enum.reduce(constant_test_node_refs, [], fn ref = {:constant_test_node_ref, _}, result ->
-        constant_test_node = RefMap.fetch!(state.constant_test_nodes, ref)
+        constant_test_node = State.RefMap.fetch!(state.constant_test_nodes, ref)
 
         children =
           if constant_test_node.alpha_memory == nil do
@@ -72,7 +71,7 @@ defmodule Ruler.GraphViz do
 
     alpha_memory_edges =
       Enum.reduce(alpha_memory_refs, [], fn ref = {:alpha_memory_ref, _}, result ->
-        alpha_memory = RefMap.fetch!(state.alpha_memories, ref)
+        alpha_memory = State.RefMap.fetch!(state.alpha_memories, ref)
 
         alpha_memory.join_nodes
         |> Enum.map(fn child_ref -> {ref, child_ref} end)

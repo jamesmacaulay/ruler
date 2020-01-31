@@ -1,17 +1,17 @@
 defmodule Ruler.State.FactInfo do
-  alias Ruler.State.{
-    BetaMemory,
-    FactInfo
+  alias Ruler.{
+    State
   }
 
   @enforce_keys []
   defstruct partial_activations: MapSet.new()
 
   @type t :: %__MODULE__{
-          partial_activations: MapSet.t({BetaMemory.ref(), BetaMemory.partial_activation()})
+          partial_activations:
+            MapSet.t({State.BetaMemory.ref(), State.BetaMemory.partial_activation()})
         }
 
-  @spec new() :: FactInfo.t()
+  @spec new() :: State.FactInfo.t()
   def new() do
     %__MODULE__{}
   end
