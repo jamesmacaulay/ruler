@@ -39,17 +39,22 @@ defmodule Ruler.Engine.ActivationNode do
     {state, ref}
   end
 
-  @spec left_activate(state, ref, partial_activation, Fact.t()) :: state
-  def left_activate(state, ref, partial_activation, fact) do
+  @spec left_activate(state, ref, partial_activation, Fact.t(), :add | :remove) :: state
+  def left_activate(state, ref, partial_activation, fact, op) do
     rule_id = State.ActivationNode.rule_id_from_ref(ref)
     facts = Enum.reverse([fact | partial_activation])
     rule = Map.fetch!(state.rules, rule_id)
 
-    add_activation(state, ref, %Activation{
-      rule_id: rule_id,
-      facts: facts,
-      bindings: generate_bindings(facts, rule.conditions)
-    })
+    add_or_remove_activation(
+      state,
+      ref,
+      %Activation{
+        rule_id: rule_id,
+        facts: facts,
+        bindings: generate_bindings(facts, rule.conditions)
+      },
+      op
+    )
   end
 
   @spec insert(state, node_data) :: {state, ref}
@@ -80,8 +85,8 @@ defmodule Ruler.Engine.ActivationNode do
     end)
   end
 
-  @spec add_activation(state, ref, Activation.t()) :: state
-  defp add_activation(state, ref, activation) do
+  @spec add_or_remove_activation(state, ref, Activation.t(), :add | :remove) :: state
+  defp add_or_remove_activation(state, ref, activation, :add) do
     %{
       state
       | latest_activation_events: [
@@ -92,6 +97,21 @@ defmodule Ruler.Engine.ActivationNode do
       %{
         node
         | activations: MapSet.put(node.activations, activation)
+      }
+    end)
+  end
+
+  defp add_or_remove_activation(state, ref, activation, :remove) do
+    %{
+      state
+      | latest_activation_events: [
+          {:remove_activation, activation} | state.latest_activation_events
+        ]
+    }
+    |> update!(ref, fn node ->
+      %{
+        node
+        | activations: MapSet.delete(node.activations, activation)
       }
     end)
   end

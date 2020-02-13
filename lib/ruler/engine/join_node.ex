@@ -17,24 +17,24 @@ defmodule Ruler.Engine.JoinNode do
   end
 
   # when a new partial activation is added to the parent beta memory
-  @spec left_activate(state, ref, partial_activation) :: state
-  def left_activate(state, ref, partial_activation) do
+  @spec left_activate(state, ref, partial_activation, :add | :remove) :: state
+  def left_activate(state, ref, partial_activation, op) do
     node = fetch!(state, ref)
     alpha_memory = Engine.AlphaMemory.fetch!(state, node.alpha_memory_ref)
 
     Enum.reduce(alpha_memory.facts, state, fn fact, state ->
-      compare_and_activate_children(state, node, partial_activation, fact)
+      compare_and_activate_children(state, node, partial_activation, fact, op)
     end)
   end
 
-  @spec right_activate(state, ref, Fact.t()) :: state
-  def right_activate(state, ref, fact) do
+  @spec right_activate(state, ref, Fact.t(), :add | :remove) :: state
+  def right_activate(state, ref, fact, op) do
     node = fetch!(state, ref)
     parent = Engine.BetaMemory.fetch!(state, node.parent_ref)
 
     # fold parent.partial_activations into init_state by performing comparisons and left activations
     Enum.reduce(parent.partial_activations, state, fn partial_activation, state ->
-      compare_and_activate_children(state, node, partial_activation, fact)
+      compare_and_activate_children(state, node, partial_activation, fact, op)
     end)
   end
 
@@ -92,7 +92,7 @@ defmodule Ruler.Engine.JoinNode do
 
     state =
       Enum.reduce(amem.facts, state, fn fact, state ->
-        right_activate(state, ref, fact)
+        right_activate(state, ref, fact, :add)
       end)
 
     update!(state, ref, fn node -> %{node | child_refs: saved_child_refs} end)
@@ -140,27 +140,33 @@ defmodule Ruler.Engine.JoinNode do
     end
   end
 
-  @spec compare_and_activate_children(state, node_data, partial_activation, Fact.t()) ::
+  @spec compare_and_activate_children(
+          state,
+          node_data,
+          partial_activation,
+          Fact.t(),
+          :add | :remove
+        ) ::
           state
-  defp compare_and_activate_children(state, node, partial_activation, fact) do
+  defp compare_and_activate_children(state, node, partial_activation, fact, op) do
     if State.JoinNode.perform_join_comparisons(node.comparisons, partial_activation, fact) do
       Enum.reduce(node.child_refs, state, fn child_ref, state ->
-        left_activate_child(state, child_ref, partial_activation, fact)
+        left_activate_child(state, child_ref, partial_activation, fact, op)
       end)
     else
       state
     end
   end
 
-  @spec left_activate_child(state, child_ref, partial_activation, Fact.t()) ::
+  @spec left_activate_child(state, child_ref, partial_activation, Fact.t(), :add | :remove) ::
           state
-  defp left_activate_child(state, child_ref, partial_activation, fact) do
+  defp left_activate_child(state, child_ref, partial_activation, fact, op) do
     case child_ref do
       {:beta_memory_ref, _} ->
-        Engine.BetaMemory.left_activate(state, child_ref, partial_activation, fact)
+        Engine.BetaMemory.left_activate(state, child_ref, partial_activation, fact, op)
 
       {:activation_node_ref, _} ->
-        Engine.ActivationNode.left_activate(state, child_ref, partial_activation, fact)
+        Engine.ActivationNode.left_activate(state, child_ref, partial_activation, fact, op)
     end
   end
 end

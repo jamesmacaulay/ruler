@@ -13,7 +13,13 @@ defmodule Ruler.Engine do
   @spec add_fact(state, fact) :: state
   def add_fact(state, fact) do
     state = %{state | facts: Map.put(state.facts, fact, State.FactInfo.new())}
-    Engine.ConstantTestNode.activate(state, state.alpha_top_node, fact)
+    Engine.ConstantTestNode.activate(state, state.alpha_top_node, fact, :add)
+  end
+
+  @spec remove_fact(state, fact) :: state
+  def remove_fact(state, fact) do
+    state = %{state | facts: Map.delete(state.facts, fact)}
+    Engine.ConstantTestNode.activate(state, state.alpha_top_node, fact, :remove)
   end
 
   @spec add_rule(state, rule) :: state

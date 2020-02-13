@@ -38,18 +38,24 @@ defmodule Ruler.Engine.AlphaMemory do
     end)
   end
 
-  @spec activate(state, ref, Fact.t()) :: state
-  def activate(state, ref, fact) do
+  @spec activate(state, ref, Fact.t(), :add | :remove) :: state
+  def activate(state, ref, fact, op) do
     state =
       update!(state, ref, fn mem ->
-        %{mem | facts: MapSet.put(mem.facts, fact)}
+        case op do
+          :add ->
+            %{mem | facts: MapSet.put(mem.facts, fact)}
+
+          :remove ->
+            %{mem | facts: MapSet.delete(mem.facts, fact)}
+        end
       end)
 
     Enum.reduce(
       fetch!(state, ref).join_node_refs,
       state,
       fn join_node_ref, state ->
-        Engine.JoinNode.right_activate(state, join_node_ref, fact)
+        Engine.JoinNode.right_activate(state, join_node_ref, fact, op)
       end
     )
   end
@@ -70,7 +76,7 @@ defmodule Ruler.Engine.AlphaMemory do
   defp activate_on_existing_facts(state, ref, condition) do
     Enum.reduce(Map.keys(state.facts), state, fn fact, state ->
       if Condition.constant_tests_match_fact?(condition, fact) do
-        activate(state, ref, fact)
+        activate(state, ref, fact, :add)
       else
         state
       end

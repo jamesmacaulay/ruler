@@ -27,15 +27,15 @@ defmodule Ruler.Engine.ConstantTestNode do
     )
   end
 
-  @spec activate(state, ref, Fact.t()) :: state
-  def activate(state, ref, fact) do
+  @spec activate(state, ref, Fact.t(), :add | :remove) :: state
+  def activate(state, ref, fact, op) do
     node = fetch!(state, ref)
 
     if State.ConstantTestNode.matches_fact?(node, fact) do
-      state = activate_alpha_memory_if_present(state, node.alpha_memory_ref, fact)
+      state = activate_alpha_memory_if_present(state, node.alpha_memory_ref, fact, op)
 
       Enum.reduce(node.child_refs, state, fn child_ref, state ->
-        activate(state, child_ref, fact)
+        activate(state, child_ref, fact, op)
       end)
     else
       state
@@ -49,11 +49,16 @@ defmodule Ruler.Engine.ConstantTestNode do
     end)
   end
 
-  @spec activate_alpha_memory_if_present(state, State.AlphaMemory.ref() | nil, Fact.t()) :: state
-  defp activate_alpha_memory_if_present(state, nil, _), do: state
+  @spec activate_alpha_memory_if_present(
+          state,
+          State.AlphaMemory.ref() | nil,
+          Fact.t(),
+          :add | :remove
+        ) :: state
+  defp activate_alpha_memory_if_present(state, nil, _, _), do: state
 
-  defp activate_alpha_memory_if_present(state, mem_ref, fact) do
-    Engine.AlphaMemory.activate(state, mem_ref, fact)
+  defp activate_alpha_memory_if_present(state, mem_ref, fact, op) do
+    Engine.AlphaMemory.activate(state, mem_ref, fact, op)
   end
 
   @spec update!(state, ref, (node_data -> node_data)) :: state

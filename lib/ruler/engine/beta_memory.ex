@@ -35,14 +35,13 @@ defmodule Ruler.Engine.BetaMemory do
     end
   end
 
-  @spec left_activate(state, ref, partial_activation, Fact.t()) :: state
-  def left_activate(state, ref, partial_activation, fact) do
+  @spec left_activate(state, ref, partial_activation, Fact.t(), :add | :remove) :: state
+  def left_activate(state, ref, partial_activation, fact, op) do
     partial_activation = [fact | partial_activation]
 
     state
-    |> add_partial_activation(ref, partial_activation)
-    |> link_facts_to_partial_activation(ref, partial_activation)
-    |> left_activate_children(ref, partial_activation)
+    |> add_or_remove_partial_activation(ref, partial_activation, op)
+    |> left_activate_children(ref, partial_activation, op)
   end
 
   @spec find_child!(state, ref, (mem_data -> boolean)) :: State.JoinNode.ref() | nil
@@ -79,39 +78,27 @@ defmodule Ruler.Engine.BetaMemory do
     {%{state | beta_memories: mems}, ref}
   end
 
-  @spec add_partial_activation(state, ref, partial_activation) :: state
-  defp add_partial_activation(state, ref, partial_activation) do
+  @spec add_or_remove_partial_activation(state, ref, partial_activation, :add | :remove) :: state
+  defp add_or_remove_partial_activation(state, ref, partial_activation, :add) do
     update!(state, ref, fn mem ->
       %{mem | partial_activations: MapSet.put(mem.partial_activations, partial_activation)}
     end)
   end
 
-  @spec link_facts_to_partial_activation(state, ref, partial_activation) :: state
-  defp link_facts_to_partial_activation(state, ref, partial_activation) do
-    # for each fact in the new partial activation, update that fact's info in the state
-    # to remember that this beta memory has a reference to that fact via this new partial activation
-    facts =
-      Enum.reduce(partial_activation, state.facts, fn fact, factmap ->
-        Map.update!(factmap, fact, fn fact_info ->
-          %{
-            fact_info
-            | partial_activations:
-                MapSet.put(fact_info.partial_activations, {ref, partial_activation})
-          }
-        end)
-      end)
-
-    %{state | facts: facts}
+  defp add_or_remove_partial_activation(state, ref, partial_activation, :remove) do
+    update!(state, ref, fn mem ->
+      %{mem | partial_activations: MapSet.delete(mem.partial_activations, partial_activation)}
+    end)
   end
 
-  @spec left_activate_children(state, ref, partial_activation) :: state
-  defp left_activate_children(state, ref, partial_activation) do
+  @spec left_activate_children(state, ref, partial_activation, :add | :remove) :: state
+  defp left_activate_children(state, ref, partial_activation, op) do
     # for each child join node of the beta memory, perform a left activation, and return the final state
     Enum.reduce(
       fetch!(state, ref).child_refs,
       state,
       fn join_node_ref, state ->
-        Engine.JoinNode.left_activate(state, join_node_ref, partial_activation)
+        Engine.JoinNode.left_activate(state, join_node_ref, partial_activation, op)
       end
     )
   end
