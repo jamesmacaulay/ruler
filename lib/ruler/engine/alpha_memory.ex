@@ -22,7 +22,7 @@ defmodule Ruler.Engine.AlphaMemory do
 
     constant_test_node = Engine.ConstantTestNode.fetch!(state, constant_test_node_ref)
 
-    case constant_test_node.alpha_memory do
+    case constant_test_node.alpha_memory_ref do
       nil ->
         add_new_alpha_memory_to_constant_test_node(state, constant_test_node_ref, condition)
 
@@ -34,7 +34,7 @@ defmodule Ruler.Engine.AlphaMemory do
   @spec add_join_node!(state, ref, State.JoinNode.ref()) :: state
   def add_join_node!(state, amem_ref, join_node_ref) do
     update!(state, amem_ref, fn mem ->
-      %{mem | join_nodes: [join_node_ref | mem.join_nodes]}
+      %{mem | join_node_refs: [join_node_ref | mem.join_node_refs]}
     end)
   end
 
@@ -46,7 +46,7 @@ defmodule Ruler.Engine.AlphaMemory do
       end)
 
     Enum.reduce(
-      fetch!(state, ref).join_nodes,
+      fetch!(state, ref).join_node_refs,
       state,
       fn join_node_ref, state ->
         Engine.JoinNode.right_activate(state, join_node_ref, fact)

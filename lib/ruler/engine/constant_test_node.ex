@@ -32,9 +32,9 @@ defmodule Ruler.Engine.ConstantTestNode do
     node = fetch!(state, ref)
 
     if State.ConstantTestNode.matches_fact?(node, fact) do
-      state = activate_alpha_memory_if_present(state, node.alpha_memory, fact)
+      state = activate_alpha_memory_if_present(state, node.alpha_memory_ref, fact)
 
-      Enum.reduce(node.children, state, fn child_ref, state ->
+      Enum.reduce(node.child_refs, state, fn child_ref, state ->
         activate(state, child_ref, fact)
       end)
     else
@@ -45,7 +45,7 @@ defmodule Ruler.Engine.ConstantTestNode do
   @spec update_alpha_memory!(state, ref, State.AlphaMemory.ref()) :: state
   def update_alpha_memory!(state, ref, mem_ref) do
     update!(state, ref, fn node ->
-      %{node | alpha_memory: mem_ref}
+      %{node | alpha_memory_ref: mem_ref}
     end)
   end
 
@@ -72,15 +72,15 @@ defmodule Ruler.Engine.ConstantTestNode do
   defp add_child!(state, parent_ref, field_index, target_value) do
     {state, child_ref} =
       insert(state, %State.ConstantTestNode{
-        field: field_index,
+        field_index: field_index,
         target_value: target_value,
-        alpha_memory: nil,
-        children: []
+        alpha_memory_ref: nil,
+        child_refs: []
       })
 
     state =
       update!(state, parent_ref, fn parent_data ->
-        %{parent_data | children: [child_ref | parent_data.children]}
+        %{parent_data | child_refs: [child_ref | parent_data.child_refs]}
       end)
 
     {state, child_ref}
@@ -90,7 +90,7 @@ defmodule Ruler.Engine.ConstantTestNode do
   defp find_child!(state, parent_ref, pred) do
     parent = fetch!(state, parent_ref)
 
-    Enum.find(parent.children, fn child_ref ->
+    Enum.find(parent.child_refs, fn child_ref ->
       pred.(fetch!(state, child_ref))
     end)
   end
@@ -99,7 +99,7 @@ defmodule Ruler.Engine.ConstantTestNode do
   defp build_or_share(state, parent_ref, field_index, target_value) do
     suitable_child_ref =
       find_child!(state, parent_ref, fn child ->
-        child.field == field_index && child.target_value == target_value
+        child.field_index == field_index && child.target_value == target_value
       end)
 
     case suitable_child_ref do

@@ -54,10 +54,10 @@ defmodule Ruler.State do
         State.RefMap.new(
           :constant_test_node_ref,
           %State.ConstantTestNode{
-            field: nil,
+            field_index: nil,
             target_value: nil,
-            alpha_memory: nil,
-            children: []
+            alpha_memory_ref: nil,
+            child_refs: []
           }
         ),
       alpha_memories: State.RefMap.new(:alpha_memory_ref),
@@ -65,8 +65,8 @@ defmodule Ruler.State do
         State.RefMap.new(
           :beta_memory_ref,
           %State.BetaMemory{
-            parent: nil,
-            children: MapSet.new(),
+            parent_ref: nil,
+            child_refs: MapSet.new(),
             partial_activations: MapSet.new([[]])
           }
         ),

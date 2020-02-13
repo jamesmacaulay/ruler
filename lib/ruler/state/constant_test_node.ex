@@ -4,23 +4,23 @@ defmodule Ruler.State.ConstantTestNode do
     State
   }
 
-  @enforce_keys [:field, :target_value, :alpha_memory, :children]
-  defstruct [:field, :target_value, :alpha_memory, :children]
+  @enforce_keys [:field_index, :target_value, :alpha_memory_ref, :child_refs]
+  defstruct [:field_index, :target_value, :alpha_memory_ref, :child_refs]
 
   @type t :: %__MODULE__{
           # field-to-test
-          field: Fact.field_index() | nil,
+          field_index: Fact.field_index() | nil,
           # thing-the-field-must-equal
           target_value: any(),
           # output-memory
-          alpha_memory: State.AlphaMemory.ref() | nil,
-          children: [State.ConstantTestNode.ref()]
+          alpha_memory_ref: State.AlphaMemory.ref() | nil,
+          child_refs: [State.ConstantTestNode.ref()]
         }
   @type ref :: {:constant_test_node_ref, State.RefMap.ref()}
 
   @spec matches_fact?(State.ConstantTestNode.t(), Fact.t()) :: boolean
   def matches_fact?(node, fact) do
-    field_index = node.field
+    field_index = node.field_index
     field_index == nil || elem(fact, field_index) == node.target_value
   end
 end

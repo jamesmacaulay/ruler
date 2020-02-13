@@ -39,7 +39,7 @@ defmodule Ruler.GraphViz do
       Enum.reduce(beta_memory_refs, [], fn ref = {:beta_memory_ref, _}, result ->
         beta_memory = State.RefMap.fetch!(state.beta_memories, ref)
 
-        beta_memory.children
+        beta_memory.child_refs
         |> Enum.map(fn child_ref -> {ref, child_ref} end)
         |> Enum.concat(result)
       end)
@@ -48,7 +48,7 @@ defmodule Ruler.GraphViz do
       Enum.reduce(join_node_refs, [], fn ref = {:join_node_ref, _}, result ->
         join_node = State.RefMap.fetch!(state.join_nodes, ref)
 
-        join_node.children
+        join_node.child_refs
         |> Enum.map(fn child_ref -> {ref, child_ref} end)
         |> Enum.concat(result)
       end)
@@ -58,10 +58,10 @@ defmodule Ruler.GraphViz do
         constant_test_node = State.RefMap.fetch!(state.constant_test_nodes, ref)
 
         children =
-          if constant_test_node.alpha_memory == nil do
-            constant_test_node.children
+          if constant_test_node.alpha_memory_ref == nil do
+            constant_test_node.child_refs
           else
-            [constant_test_node.alpha_memory | constant_test_node.children]
+            [constant_test_node.alpha_memory_ref | constant_test_node.child_refs]
           end
 
         children
@@ -73,7 +73,7 @@ defmodule Ruler.GraphViz do
       Enum.reduce(alpha_memory_refs, [], fn ref = {:alpha_memory_ref, _}, result ->
         alpha_memory = State.RefMap.fetch!(state.alpha_memories, ref)
 
-        alpha_memory.join_nodes
+        alpha_memory.join_node_refs
         |> Enum.map(fn child_ref -> {ref, child_ref} end)
         |> Enum.concat(result)
       end)

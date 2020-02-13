@@ -5,27 +5,27 @@ defmodule Ruler.State.JoinNode do
     State
   }
 
-  @enforce_keys [:parent, :children, :alpha_memory, :comparisons]
-  defstruct [:parent, :children, :alpha_memory, :comparisons]
+  @enforce_keys [:parent_ref, :child_refs, :alpha_memory_ref, :comparisons]
+  defstruct [:parent_ref, :child_refs, :alpha_memory_ref, :comparisons]
 
   @type ref :: {:join_node_ref, State.RefMap.ref()}
   @type child_ref :: State.BetaMemory.ref() | State.ActivationNode.ref()
 
   @type t :: %__MODULE__{
-          parent: State.BetaMemory.ref(),
-          children: [State.JoinNode.child_ref()],
-          alpha_memory: State.AlphaMemory.ref(),
+          parent_ref: State.BetaMemory.ref(),
+          child_refs: [State.JoinNode.child_ref()],
+          alpha_memory_ref: State.AlphaMemory.ref(),
           comparisons: [Comparison.t()]
         }
 
   defmodule Comparison do
-    @enforce_keys [:arg1_field, :fact2_index, :arg2_field]
-    defstruct [:arg1_field, :fact2_index, :arg2_field]
+    @enforce_keys [:arg1_field_index, :fact2_index, :arg2_field_index]
+    defstruct [:arg1_field_index, :fact2_index, :arg2_field_index]
 
     @type t :: %__MODULE__{
-            arg1_field: Fact.field_index(),
+            arg1_field_index: Fact.field_index(),
             fact2_index: non_neg_integer,
-            arg2_field: Fact.field_index()
+            arg2_field_index: Fact.field_index()
           }
 
     @spec perform(Comparison.t(), State.BetaMemory.partial_activation(), Fact.t()) :: boolean
@@ -34,9 +34,9 @@ defmodule Ruler.State.JoinNode do
           partial_activation,
           fact
         ) do
-      arg1 = elem(fact, comparison.arg1_field)
+      arg1 = elem(fact, comparison.arg1_field_index)
       fact2 = Enum.fetch!(partial_activation, comparison.fact2_index)
-      arg2 = elem(fact2, comparison.arg2_field)
+      arg2 = elem(fact2, comparison.arg2_field_index)
       arg1 == arg2
     end
   end
@@ -67,9 +67,9 @@ defmodule Ruler.State.JoinNode do
 
         {earlier_condition_index, earlier_field_index} ->
           comparison = %Comparison{
-            arg1_field: field_index,
+            arg1_field_index: field_index,
             fact2_index: earlier_condition_index,
-            arg2_field: earlier_field_index
+            arg2_field_index: earlier_field_index
           }
 
           [comparison | result]

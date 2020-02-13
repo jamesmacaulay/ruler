@@ -49,7 +49,7 @@ defmodule Ruler.Engine.BetaMemory do
   def find_child!(state, parent_ref, pred) do
     parent = fetch!(state, parent_ref)
 
-    Enum.find(parent.children, fn child_ref ->
+    Enum.find(parent.child_refs, fn child_ref ->
       pred.(Engine.JoinNode.fetch!(state, child_ref))
     end)
   end
@@ -57,13 +57,13 @@ defmodule Ruler.Engine.BetaMemory do
   @spec add_join_node!(state, ref, State.JoinNode.ref()) :: state
   def add_join_node!(state, bmem_ref, join_node_ref) do
     update!(state, bmem_ref, fn mem ->
-      %{mem | children: MapSet.put(mem.children, join_node_ref)}
+      %{mem | child_refs: MapSet.put(mem.child_refs, join_node_ref)}
     end)
   end
 
   @spec update_new_node_with_matches_from_above(state, ref) :: state
   defp update_new_node_with_matches_from_above(state, ref) do
-    parent_ref = fetch!(state, ref).parent
+    parent_ref = fetch!(state, ref).parent_ref
     Engine.JoinNode.update_new_child_node_with_matches_from_above(state, parent_ref, ref)
   end
 
@@ -108,7 +108,7 @@ defmodule Ruler.Engine.BetaMemory do
   defp left_activate_children(state, ref, partial_activation) do
     # for each child join node of the beta memory, perform a left activation, and return the final state
     Enum.reduce(
-      fetch!(state, ref).children,
+      fetch!(state, ref).child_refs,
       state,
       fn join_node_ref, state ->
         Engine.JoinNode.left_activate(state, join_node_ref, partial_activation)

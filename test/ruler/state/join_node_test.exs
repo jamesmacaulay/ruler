@@ -4,7 +4,7 @@ defmodule Ruler.State.JoinNodeTest do
   doctest Ruler.State.JoinNode
 
   test "Comparison.perform returns true when specified field values are equal" do
-    comparison = %JoinNode.Comparison{arg1_field: 2, fact2_index: 0, arg2_field: 2}
+    comparison = %JoinNode.Comparison{arg1_field_index: 2, fact2_index: 0, arg2_field_index: 2}
     partial_activation = [{"user:99", :id, "99"}]
 
     comparison_result =
@@ -15,7 +15,7 @@ defmodule Ruler.State.JoinNodeTest do
   end
 
   test "Comparison.perform returns false when specified field values are not equal" do
-    comparison = %JoinNode.Comparison{arg1_field: 2, fact2_index: 0, arg2_field: 2}
+    comparison = %JoinNode.Comparison{arg1_field_index: 2, fact2_index: 0, arg2_field_index: 2}
     partial_activation = [{"user:99", :id, "99"}]
 
     comparison_result =

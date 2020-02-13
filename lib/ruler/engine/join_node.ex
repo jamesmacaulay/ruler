@@ -20,7 +20,7 @@ defmodule Ruler.Engine.JoinNode do
   @spec left_activate(state, ref, partial_activation) :: state
   def left_activate(state, ref, partial_activation) do
     node = fetch!(state, ref)
-    alpha_memory = Engine.AlphaMemory.fetch!(state, node.alpha_memory)
+    alpha_memory = Engine.AlphaMemory.fetch!(state, node.alpha_memory_ref)
 
     Enum.reduce(alpha_memory.facts, state, fn fact, state ->
       compare_and_activate_children(state, node, partial_activation, fact)
@@ -30,7 +30,7 @@ defmodule Ruler.Engine.JoinNode do
   @spec right_activate(state, ref, Fact.t()) :: state
   def right_activate(state, ref, fact) do
     node = fetch!(state, ref)
-    parent = Engine.BetaMemory.fetch!(state, node.parent)
+    parent = Engine.BetaMemory.fetch!(state, node.parent_ref)
 
     # fold parent.partial_activations into init_state by performing comparisons and left activations
     Enum.reduce(parent.partial_activations, state, fn partial_activation, state ->
@@ -40,7 +40,7 @@ defmodule Ruler.Engine.JoinNode do
 
   @spec find_beta_memory_child_ref!(state, ref) :: State.BetaMemory.ref() | nil
   def find_beta_memory_child_ref!(state, ref) do
-    Enum.find(fetch!(state, ref).children, fn child_ref ->
+    Enum.find(fetch!(state, ref).child_refs, fn child_ref ->
       match?({:beta_memory_ref, _}, child_ref)
     end)
   end
@@ -78,24 +78,24 @@ defmodule Ruler.Engine.JoinNode do
   @spec add_child_ref!(state, ref, child_ref) :: state
   def add_child_ref!(state, ref, child_ref) do
     update!(state, ref, fn node ->
-      %{node | children: [child_ref | node.children]}
+      %{node | child_refs: [child_ref | node.child_refs]}
     end)
   end
 
   @spec update_new_child_node_with_matches_from_above(state, ref, child_ref) :: state
   def update_new_child_node_with_matches_from_above(state, ref, child_ref) do
     node = fetch!(state, ref)
-    amem = Engine.AlphaMemory.fetch!(state, node.alpha_memory)
-    saved_children = node.children
+    amem = Engine.AlphaMemory.fetch!(state, node.alpha_memory_ref)
+    saved_child_refs = node.child_refs
 
-    state = update!(state, ref, fn node -> %{node | children: [child_ref]} end)
+    state = update!(state, ref, fn node -> %{node | child_refs: [child_ref]} end)
 
     state =
       Enum.reduce(amem.facts, state, fn fact, state ->
         right_activate(state, ref, fact)
       end)
 
-    update!(state, ref, fn node -> %{node | children: saved_children} end)
+    update!(state, ref, fn node -> %{node | child_refs: saved_child_refs} end)
   end
 
   @spec update!(state, ref, (node_data -> node_data)) :: state
@@ -115,16 +115,16 @@ defmodule Ruler.Engine.JoinNode do
   defp build_or_share(state, parent_ref, amem_ref, comparisons) do
     suitable_child_ref =
       Engine.BetaMemory.find_child!(state, parent_ref, fn child ->
-        child.alpha_memory == amem_ref && child.comparisons == comparisons
+        child.alpha_memory_ref == amem_ref && child.comparisons == comparisons
       end)
 
     case suitable_child_ref do
       nil ->
         {state, ref} =
           insert(state, %State.JoinNode{
-            parent: parent_ref,
-            children: [],
-            alpha_memory: amem_ref,
+            parent_ref: parent_ref,
+            child_refs: [],
+            alpha_memory_ref: amem_ref,
             comparisons: comparisons
           })
 
@@ -144,7 +144,7 @@ defmodule Ruler.Engine.JoinNode do
           state
   defp compare_and_activate_children(state, node, partial_activation, fact) do
     if State.JoinNode.perform_join_comparisons(node.comparisons, partial_activation, fact) do
-      Enum.reduce(node.children, state, fn child_ref, state ->
+      Enum.reduce(node.child_refs, state, fn child_ref, state ->
         left_activate_child(state, child_ref, partial_activation, fact)
       end)
     else

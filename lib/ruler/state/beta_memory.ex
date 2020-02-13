@@ -4,13 +4,13 @@ defmodule Ruler.State.BetaMemory do
     State
   }
 
-  @enforce_keys [:parent, :children, :partial_activations]
-  defstruct [:parent, :children, :partial_activations]
+  @enforce_keys [:parent_ref, :child_refs, :partial_activations]
+  defstruct [:parent_ref, :child_refs, :partial_activations]
 
   @type partial_activation :: [Fact.t()]
   @type t :: %__MODULE__{
-          parent: parent_ref | nil,
-          children: MapSet.t(State.JoinNode.ref()),
+          parent_ref: parent_ref | nil,
+          child_refs: MapSet.t(State.JoinNode.ref()),
           # "items":
           partial_activations: MapSet.t(partial_activation)
         }
@@ -20,8 +20,8 @@ defmodule Ruler.State.BetaMemory do
   @spec new(parent_ref) :: State.BetaMemory.t()
   def new(parent_ref) do
     %State.BetaMemory{
-      parent: parent_ref,
-      children: MapSet.new(),
+      parent_ref: parent_ref,
+      child_refs: MapSet.new(),
       partial_activations: MapSet.new()
     }
   end

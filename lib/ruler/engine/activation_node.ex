@@ -26,7 +26,7 @@ defmodule Ruler.Engine.ActivationNode do
 
     {state, ref} =
       insert(state, %State.ActivationNode{
-        parent: parent_ref,
+        parent_ref: parent_ref,
         rule_id: rule.id,
         activations: MapSet.new()
       })
@@ -66,7 +66,7 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec update_new_node_with_matches_from_above(state, ref) :: state
   defp update_new_node_with_matches_from_above(state, ref) do
-    parent_ref = fetch!(state, ref).parent
+    parent_ref = fetch!(state, ref).parent_ref
     Engine.JoinNode.update_new_child_node_with_matches_from_above(state, parent_ref, ref)
   end
 
