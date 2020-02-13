@@ -1,34 +1,25 @@
 defmodule Ruler.GraphViz do
   alias Ruler.{
+    Engine,
     State
   }
 
   @spec to_dot(State.t()) :: String.t()
   def to_dot(state) do
-    beta_memory_refs =
-      State.RefMap.keys(state.beta_memories)
-      |> Enum.map(fn k -> {:beta_memory_ref, k} end)
+    beta_memory_refs = State.RefMap.keys(state.beta_memories)
 
-    join_node_refs =
-      State.RefMap.keys(state.join_nodes)
-      |> Enum.map(fn k -> {:join_node_ref, k} end)
+    join_node_refs = State.RefMap.keys(state.join_nodes)
 
-    activation_node_refs =
-      State.RefMap.keys(state.activation_nodes)
-      |> Enum.map(fn k -> {:activation_node_ref, k} end)
+    activation_node_refs = State.RefMap.keys(state.activation_nodes)
 
     beta_nodes_declaration =
       Enum.concat([beta_memory_refs, join_node_refs, activation_node_refs])
       |> Enum.map(fn ref -> ref_to_id(ref) end)
       |> Enum.join("; ")
 
-    constant_test_node_refs =
-      State.RefMap.keys(state.constant_test_nodes)
-      |> Enum.map(fn k -> {:constant_test_node_ref, k} end)
+    constant_test_node_refs = State.RefMap.keys(state.constant_test_nodes)
 
-    alpha_memory_refs =
-      State.RefMap.keys(state.alpha_memories)
-      |> Enum.map(fn k -> {:alpha_memory_ref, k} end)
+    alpha_memory_refs = State.RefMap.keys(state.alpha_memories)
 
     alpha_nodes_declaration =
       Enum.concat([constant_test_node_refs, alpha_memory_refs])
