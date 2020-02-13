@@ -27,7 +27,7 @@ defmodule Ruler.Engine.ActivationNode do
     {state, ref} =
       insert(state, %State.ActivationNode{
         parent: parent_ref,
-        rule: rule.id,
+        rule_id: rule.id,
         activations: MapSet.new()
       })
 
@@ -41,7 +41,7 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec left_activate(state, ref, partial_activation, Fact.t()) :: state
   def left_activate(state, ref, partial_activation, fact) do
-    rule_id = fetch!(state, ref).rule
+    rule_id = fetch!(state, ref).rule_id
     facts = Enum.reverse([fact | partial_activation])
     rule = Map.fetch!(state.rules, rule_id)
 

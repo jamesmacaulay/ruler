@@ -4,12 +4,12 @@ defmodule Ruler.State.ActivationNode do
     State
   }
 
-  @enforce_keys [:parent, :rule, :activations]
-  defstruct [:parent, :rule, :activations]
+  @enforce_keys [:parent, :rule_id, :activations]
+  defstruct [:parent, :rule_id, :activations]
 
   @type t :: %__MODULE__{
           parent: State.JoinNode.ref(),
-          rule: Rule.id(),
+          rule_id: Rule.id(),
           activations: MapSet.t(Activation.t())
         }
   @type ref :: {:activation_node_ref, State.RefMap.ref()}
