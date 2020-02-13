@@ -16,7 +16,7 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec fetch!(state, ref) :: node_data
   def fetch!(state, ref) do
-    State.RefMap.fetch!(state.activation_nodes, ref)
+    Map.fetch!(state.activation_nodes, ref)
   end
 
   @spec build(state, rule) :: {state, ref}
@@ -41,7 +41,7 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec left_activate(state, ref, partial_activation, Fact.t()) :: state
   def left_activate(state, ref, partial_activation, fact) do
-    rule_id = fetch!(state, ref).rule_id
+    rule_id = State.ActivationNode.rule_id_from_ref(ref)
     facts = Enum.reverse([fact | partial_activation])
     rule = Map.fetch!(state.rules, rule_id)
 
@@ -54,13 +54,15 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec insert(state, node_data) :: {state, ref}
   defp insert(state, node_data) do
-    {nodes, ref} = State.RefMap.insert(state.activation_nodes, node_data)
+    ref = State.ActivationNode.ref_from_rule_id(node_data.rule_id)
+    nodes = Map.put(state.activation_nodes, ref, node_data)
+
     {%{state | activation_nodes: nodes}, ref}
   end
 
   @spec update!(state, ref, (node_data -> node_data)) :: state
   defp update!(state, ref, f) do
-    nodes = State.RefMap.update!(state.activation_nodes, ref, f)
+    nodes = Map.update!(state.activation_nodes, ref, f)
     %{state | activation_nodes: nodes}
   end
 
