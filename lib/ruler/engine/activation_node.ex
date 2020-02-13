@@ -19,6 +19,11 @@ defmodule Ruler.Engine.ActivationNode do
     Map.fetch!(state.activation_nodes, ref)
   end
 
+  @spec fetch_with_rule_id!(state, Rule.id()) :: node_data
+  def fetch_with_rule_id!(state, rule_id) do
+    fetch!(state, State.ActivationNode.ref_from_rule_id(rule_id))
+  end
+
   @spec build(state, rule) :: {state, ref}
   def build(state, rule) do
     {state, parent_ref} =
