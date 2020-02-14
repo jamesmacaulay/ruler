@@ -2,11 +2,13 @@ defmodule Ruler.Engine.ConstantTestNode do
   alias Ruler.{
     Condition,
     Engine,
+    EventContext,
     Fact,
     State
   }
 
   @type state :: State.t()
+  @type ctx :: EventContext.t()
   @type node_data :: State.ConstantTestNode.t()
   @type ref :: State.ConstantTestNode.ref()
 
@@ -16,79 +18,81 @@ defmodule Ruler.Engine.ConstantTestNode do
   end
 
   # returns the new state along with the ref of the lowest child created
-  @spec build_or_share_lineage_for_condition(state, Condition.t()) :: {state, ref}
-  def build_or_share_lineage_for_condition(state, condition) do
+  @spec build_or_share_lineage_for_condition(ctx, Condition.t()) :: {ctx, ref}
+  def build_or_share_lineage_for_condition(ctx, condition) do
     Enum.reduce(
       Condition.constant_tests(condition),
-      {state, state.alpha_top_node},
-      fn {field_index, target_value}, {state, ref} ->
-        build_or_share(state, ref, field_index, target_value)
+      {ctx, ctx.state.alpha_top_node},
+      fn {field_index, target_value}, {ctx, ref} ->
+        build_or_share(ctx, ref, field_index, target_value)
       end
     )
   end
 
-  @spec activate(state, ref, Fact.t(), :add | :remove) :: state
-  def activate(state, ref, fact, op) do
-    node = fetch!(state, ref)
+  @spec activate(ctx, ref, Fact.t(), :add | :remove) :: ctx
+  def activate(ctx, ref, fact, op) do
+    node = fetch!(ctx.state, ref)
 
     if State.ConstantTestNode.matches_fact?(node, fact) do
-      state = activate_alpha_memory_if_present(state, node.alpha_memory_ref, fact, op)
+      ctx = activate_alpha_memory_if_present(ctx, node.alpha_memory_ref, fact, op)
 
-      Enum.reduce(node.child_refs, state, fn child_ref, state ->
-        activate(state, child_ref, fact, op)
+      Enum.reduce(node.child_refs, ctx, fn child_ref, ctx ->
+        activate(ctx, child_ref, fact, op)
       end)
     else
-      state
+      ctx
     end
   end
 
-  @spec update_alpha_memory!(state, ref, State.AlphaMemory.ref()) :: state
-  def update_alpha_memory!(state, ref, mem_ref) do
-    update!(state, ref, fn node ->
+  @spec update_alpha_memory!(ctx, ref, State.AlphaMemory.ref()) :: ctx
+  def update_alpha_memory!(ctx, ref, mem_ref) do
+    update!(ctx, ref, fn node ->
       %{node | alpha_memory_ref: mem_ref}
     end)
   end
 
   @spec activate_alpha_memory_if_present(
-          state,
+          ctx,
           State.AlphaMemory.ref() | nil,
           Fact.t(),
           :add | :remove
-        ) :: state
-  defp activate_alpha_memory_if_present(state, nil, _, _), do: state
+        ) :: ctx
+  defp activate_alpha_memory_if_present(ctx, nil, _, _), do: ctx
 
-  defp activate_alpha_memory_if_present(state, mem_ref, fact, op) do
-    Engine.AlphaMemory.activate(state, mem_ref, fact, op)
+  defp activate_alpha_memory_if_present(ctx, mem_ref, fact, op) do
+    Engine.AlphaMemory.activate(ctx, mem_ref, fact, op)
   end
 
-  @spec update!(state, ref, (node_data -> node_data)) :: state
-  defp update!(state, ref, f) do
-    nodes = State.RefMap.update!(state.constant_test_nodes, ref, f)
-    %{state | constant_test_nodes: nodes}
+  @spec update!(ctx, ref, (node_data -> node_data)) :: ctx
+  defp update!(ctx, ref, f) do
+    nodes = State.RefMap.update!(ctx.state.constant_test_nodes, ref, f)
+    state = %{ctx.state | constant_test_nodes: nodes}
+    %{ctx | state: state}
   end
 
-  @spec insert(state, node_data) :: {state, ref}
-  defp insert(state, node_data) do
-    {nodes, ref} = State.RefMap.insert(state.constant_test_nodes, node_data)
-    {%{state | constant_test_nodes: nodes}, ref}
+  @spec insert(ctx, node_data) :: {ctx, ref}
+  defp insert(ctx, node_data) do
+    {nodes, ref} = State.RefMap.insert(ctx.state.constant_test_nodes, node_data)
+    state = %{ctx.state | constant_test_nodes: nodes}
+    {%{ctx | state: state}, ref}
   end
 
-  @spec add_child!(state, ref, Fact.field_index(), any) :: {state, ref}
-  defp add_child!(state, parent_ref, field_index, target_value) do
-    {state, child_ref} =
-      insert(state, %State.ConstantTestNode{
+  @spec add_child!(ctx, ref, Fact.field_index(), any) :: {ctx, ref}
+  defp add_child!(ctx, parent_ref, field_index, target_value) do
+    {ctx, child_ref} =
+      insert(ctx, %State.ConstantTestNode{
         field_index: field_index,
         target_value: target_value,
         alpha_memory_ref: nil,
         child_refs: []
       })
 
-    state =
-      update!(state, parent_ref, fn parent_data ->
+    ctx =
+      update!(ctx, parent_ref, fn parent_data ->
         %{parent_data | child_refs: [child_ref | parent_data.child_refs]}
       end)
 
-    {state, child_ref}
+    {ctx, child_ref}
   end
 
   @spec find_child!(state, ref, (node_data -> boolean)) :: ref | nil
@@ -100,19 +104,19 @@ defmodule Ruler.Engine.ConstantTestNode do
     end)
   end
 
-  @spec build_or_share(state, ref, Fact.field_index(), any) :: {state, ref}
-  defp build_or_share(state, parent_ref, field_index, target_value) do
+  @spec build_or_share(ctx, ref, Fact.field_index(), any) :: {ctx, ref}
+  defp build_or_share(ctx, parent_ref, field_index, target_value) do
     suitable_child_ref =
-      find_child!(state, parent_ref, fn child ->
+      find_child!(ctx.state, parent_ref, fn child ->
         child.field_index == field_index && child.target_value == target_value
       end)
 
     case suitable_child_ref do
       nil ->
-        add_child!(state, parent_ref, field_index, target_value)
+        add_child!(ctx, parent_ref, field_index, target_value)
 
       _ ->
-        {state, suitable_child_ref}
+        {ctx, suitable_child_ref}
     end
   end
 end

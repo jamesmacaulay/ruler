@@ -1,6 +1,5 @@
 defmodule Ruler.State do
   alias Ruler.{
-    Activation,
     Fact,
     Rule,
     State
@@ -15,8 +14,7 @@ defmodule Ruler.State do
     :join_nodes,
     :activation_nodes,
     :alpha_top_node,
-    :beta_top_node,
-    :latest_activation_events
+    :beta_top_node
   ]
   defstruct [
     :facts,
@@ -27,8 +25,7 @@ defmodule Ruler.State do
     :join_nodes,
     :activation_nodes,
     :alpha_top_node,
-    :beta_top_node,
-    :latest_activation_events
+    :beta_top_node
   ]
 
   @type t :: %__MODULE__{
@@ -41,8 +38,7 @@ defmodule Ruler.State do
           join_nodes: State.RefMap.t(:join_node_ref, State.JoinNode.t()),
           activation_nodes: %{State.ActivationNode.ref() => State.ActivationNode.t()},
           alpha_top_node: State.ConstantTestNode.ref(),
-          beta_top_node: State.BetaMemory.ref(),
-          latest_activation_events: [Activation.activation_event()]
+          beta_top_node: State.BetaMemory.ref()
         }
 
   @spec new :: State.t()
@@ -73,8 +69,7 @@ defmodule Ruler.State do
       join_nodes: State.RefMap.new(:join_node_ref),
       activation_nodes: %{},
       alpha_top_node: {:constant_test_node_ref, 0},
-      beta_top_node: {:beta_memory_ref, 0},
-      latest_activation_events: []
+      beta_top_node: {:beta_memory_ref, 0}
     }
   end
 end

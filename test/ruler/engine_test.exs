@@ -12,12 +12,13 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    state =
+    ctx =
       State.new()
       |> Engine.add_rule(rule)
+      |> Map.get(:state)
       |> Engine.add_fact({"user:1", :name, "Alice"})
 
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(state, :simple_constant_test)
+    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :simple_constant_test)
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
@@ -25,8 +26,8 @@ defmodule Ruler.EngineTest do
       bindings: %{:id => "user:1"}
     }
 
-    assert {:add_activation, expected_activation} == Enum.at(state.latest_activation_events, 0)
-    assert MapSet.new([expected_activation]) == activation_node.activations
+    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert activation_node.activations == MapSet.new([expected_activation])
   end
 
   test "add fact, then add matching simple constant test rule" do
@@ -38,12 +39,13 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    state =
+    ctx =
       State.new()
       |> Engine.add_fact({"user:1", :name, "Alice"})
+      |> Map.get(:state)
       |> Engine.add_rule(rule)
 
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(state, :simple_constant_test)
+    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :simple_constant_test)
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
@@ -51,8 +53,8 @@ defmodule Ruler.EngineTest do
       bindings: %{:id => "user:1"}
     }
 
-    assert {:add_activation, expected_activation} == Enum.at(state.latest_activation_events, 0)
-    assert MapSet.new([expected_activation]) == activation_node.activations
+    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert activation_node.activations == MapSet.new([expected_activation])
   end
 
   test "add complex rule with multiple joins, then add facts to match" do
@@ -67,15 +69,19 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    state =
+    ctx =
       State.new()
       |> Engine.add_rule(rule)
+      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
 
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(state, :mutual_follow_test)
+    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :mutual_follow_test)
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -88,8 +94,8 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert {:add_activation, expected_activation} == Enum.at(state.latest_activation_events, 0)
-    assert MapSet.new([expected_activation]) == activation_node.activations
+    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert activation_node.activations == MapSet.new([expected_activation])
   end
 
   test "add facts, then add matching complex rule with multiple joins" do
@@ -104,15 +110,19 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    state =
+    ctx =
       State.new()
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
+      |> Map.get(:state)
       |> Engine.add_rule(rule)
 
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(state, :mutual_follow_test)
+    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :mutual_follow_test)
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -125,8 +135,8 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert {:add_activation, expected_activation} == Enum.at(state.latest_activation_events, 0)
-    assert MapSet.new([expected_activation]) == activation_node.activations
+    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert activation_node.activations == MapSet.new([expected_activation])
   end
 
   test "add facts, then add matching complex rule with multiple joins, then remove one of the facts" do
@@ -141,16 +151,21 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    state =
+    ctx =
       State.new()
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
+      |> Map.get(:state)
       |> Engine.add_rule(rule)
+      |> Map.get(:state)
       |> Engine.remove_fact({"user:alice", :name, "Alice"})
 
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(state, :mutual_follow_test)
+    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :mutual_follow_test)
 
     expected_removed_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -163,9 +178,7 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert {:remove_activation, expected_removed_activation} ==
-             Enum.at(state.latest_activation_events, 0)
-
-    assert MapSet.new() == activation_node.activations
+    assert ctx.activation_events == [{:remove_activation, expected_removed_activation}]
+    assert activation_node.activations == MapSet.new()
   end
 end

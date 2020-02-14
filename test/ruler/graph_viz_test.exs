@@ -18,10 +18,15 @@ defmodule Ruler.GraphVizTest do
     state =
       State.new()
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
+      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
+      |> Map.get(:state)
       |> Engine.add_rule(rule)
+      |> Map.get(:state)
 
     assert GraphViz.to_dot(state) == """
            digraph "Ruler.State" {
