@@ -13,9 +13,7 @@ defmodule Ruler.EventContext do
   @type add_rule :: {:add_rule, Rule.t()}
   @type operation :: add_fact | remove_fact | add_rule
 
-  @type add_activation_event :: {:add_activation, Activation.t()}
-  @type remove_activation_event :: {:remove_activation, Activation.t()}
-  @type activation_event :: add_activation_event | remove_activation_event
+  @type activation_event :: {:activate, Activation.t()} | {:deactivate, Activation.t()}
 
   @type t :: %__MODULE__{
           state: State.t(),
@@ -29,5 +27,25 @@ defmodule Ruler.EventContext do
       state: state,
       operation: operation
     }
+  end
+
+  @spec finalize(t) :: t
+  def finalize(ctx) do
+    # we've been building up this stack-list backwards
+    %{ctx | activation_events: Enum.reverse(ctx.activation_events)}
+  end
+
+  @spec perform_activation_effects(t) :: :ok
+  def perform_activation_effects(ctx) do
+    ctx.activation_events
+    |> Enum.each(fn event = {_, activation} ->
+      rule = Map.fetch!(ctx.state.rules, activation.rule_id)
+
+      Enum.each(rule.actions, fn
+        {:perform_effects, {module, function_name}} ->
+          apply(module, function_name, [ctx, event])
+          nil
+      end)
+    end)
   end
 end

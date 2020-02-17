@@ -96,7 +96,7 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec add_or_remove_activation(ctx, ref, Activation.t(), :add | :remove) :: ctx
   defp add_or_remove_activation(ctx, ref, activation, :add) do
-    activation_events = [{:add_activation, activation} | ctx.activation_events]
+    activation_events = [{:activate, activation} | ctx.activation_events]
     ctx = %{ctx | activation_events: activation_events}
 
     update!(ctx, ref, fn node ->
@@ -108,7 +108,7 @@ defmodule Ruler.Engine.ActivationNode do
   end
 
   defp add_or_remove_activation(ctx, ref, activation, :remove) do
-    activation_events = [{:remove_activation, activation} | ctx.activation_events]
+    activation_events = [{:deactivate, activation} | ctx.activation_events]
     ctx = %{ctx | activation_events: activation_events}
 
     update!(ctx, ref, fn node ->

@@ -1,6 +1,6 @@
 defmodule Ruler.EngineTest do
   use ExUnit.Case
-  alias Ruler.{Activation, Engine, Rule, State}
+  alias Ruler.{Activation, Engine, EventContext, Rule, State}
   doctest Ruler.Engine
 
   test "add simple constant test rule, then add matching fact" do
@@ -26,7 +26,7 @@ defmodule Ruler.EngineTest do
       bindings: %{:id => "user:1"}
     }
 
-    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert ctx.activation_events == [{:activate, expected_activation}]
     assert activation_node.activations == MapSet.new([expected_activation])
   end
 
@@ -53,7 +53,7 @@ defmodule Ruler.EngineTest do
       bindings: %{:id => "user:1"}
     }
 
-    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert ctx.activation_events == [{:activate, expected_activation}]
     assert activation_node.activations == MapSet.new([expected_activation])
   end
 
@@ -94,7 +94,7 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert ctx.activation_events == [{:activate, expected_activation}]
     assert activation_node.activations == MapSet.new([expected_activation])
   end
 
@@ -135,7 +135,7 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert ctx.activation_events == [{:add_activation, expected_activation}]
+    assert ctx.activation_events == [{:activate, expected_activation}]
     assert activation_node.activations == MapSet.new([expected_activation])
   end
 
@@ -178,7 +178,45 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert ctx.activation_events == [{:remove_activation, expected_removed_activation}]
+    assert ctx.activation_events == [{:deactivate, expected_removed_activation}]
     assert activation_node.activations == MapSet.new()
+  end
+
+  defmodule Effects do
+    def echo(ctx, activation_event) do
+      send(self(), {:echo, ctx, activation_event})
+    end
+  end
+
+  test "perform_effects action" do
+    rule = %Rule{
+      id: :send_echo_when_alice_appears,
+      conditions: [
+        {{:var, :id}, {:const, :name}, {:const, "Alice"}}
+      ],
+      actions: [
+        {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
+      ]
+    }
+
+    expected_activation = %Activation{
+      rule_id: :simple_constant_test,
+      facts: [{"user:1", :name, "Alice"}],
+      bindings: %{:id => "user:1"}
+    }
+
+    ctx =
+      State.new()
+      |> Engine.add_rule(rule)
+      |> Map.get(:state)
+      |> Engine.add_fact({"user:1", :name, "Alice"})
+
+    assert_received({:echo, ^ctx, {:activate, expected_activation}})
+
+    ctx =
+      ctx.state
+      |> Engine.remove_fact({"user:1", :name, "Alice"})
+
+    assert_received({:echo, ^ctx, {:deactivate, expected_activation}})
   end
 end

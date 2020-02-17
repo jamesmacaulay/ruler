@@ -8,7 +8,4 @@ defmodule Ruler.Activation do
           bindings: bindings_map
         }
   @type bindings_map :: %{required(Condition.variable_name()) => any()}
-  @type add_activation_event :: {:add_activation, t}
-  @type remove_activation_event :: {:remove_activation, t}
-  @type activation_event :: add_activation_event | remove_activation_event
 end
