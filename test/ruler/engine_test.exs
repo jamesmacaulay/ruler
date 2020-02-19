@@ -226,4 +226,85 @@ defmodule Ruler.EngineTest do
 
     assert_received({:echo, ^ctx, {:deactivate, ^expected_activation}})
   end
+
+  test "implications" do
+    children_are_descendents = %Rule{
+      id: :children_are_descendents,
+      conditions: [
+        {{:var, :x}, {:const, :child_of}, {:var, :y}}
+      ],
+      actions: [
+        {:imply, {{:var, :x}, {:const, :descendent_of}, {:var, :y}}}
+      ]
+    }
+
+    ancestry_is_transitive = %Rule{
+      id: :ancestry_is_transitive,
+      conditions: [
+        {{:var, :x}, {:const, :descendent_of}, {:var, :y}},
+        {{:var, :y}, {:const, :descendent_of}, {:var, :z}}
+      ],
+      actions: [
+        {:imply, {{:var, :x}, {:const, :descendent_of}, {:var, :z}}}
+      ]
+    }
+
+    announce_descendents_of_eve = %Rule{
+      id: :announce_descendents_of_eve,
+      conditions: [
+        {{:var, :x}, {:const, :descendent_of}, {:const, :eve}}
+      ],
+      actions: [
+        {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
+      ]
+    }
+
+    state =
+      State.new()
+      |> Engine.add_rule(children_are_descendents)
+      |> Map.get(:state)
+      |> Engine.add_rule(ancestry_is_transitive)
+      |> Map.get(:state)
+      |> Engine.add_rule(announce_descendents_of_eve)
+      |> Map.get(:state)
+
+    state = Engine.add_fact(state, {"alice", :child_of, "beatrice"}).state
+
+    assert MapSet.new(Map.keys(state.facts)) ==
+             MapSet.new([
+               {"alice", :child_of, "beatrice"},
+               {"alice", :descendent_of, "beatrice"}
+             ])
+
+    ctx = Engine.add_fact(state, {"beatrice", :descendent_of, "eve"})
+    state = ctx.state
+
+    assert MapSet.new(Map.keys(state.facts)) ==
+             MapSet.new([
+               {"alice", :child_of, "beatrice"},
+               {"alice", :descendent_of, "beatrice"},
+               {"beatrice", :descendent_of, "eve"},
+               {"alice", :descendent_of, "eve"}
+             ])
+
+    assert_received(
+      {:echo, ^ctx,
+       {:activate,
+        %Activation{
+          rule_id: :announce_descendents_of_eve,
+          facts: [{"beatrice", :descendent_of, "eve"}],
+          bindings: %{:x => "beatrice"}
+        }}}
+    )
+
+    assert_received(
+      {:echo, ^ctx,
+       {:activate,
+        %Activation{
+          rule_id: :announce_descendents_of_eve,
+          facts: [{"alice", :descendent_of, "eve"}],
+          bindings: %{:x => "alice"}
+        }}}
+    )
+  end
 end

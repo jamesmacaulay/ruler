@@ -5,7 +5,6 @@ defmodule Ruler.Activation do
   @type t :: %__MODULE__{
           rule_id: Rule.id(),
           facts: [Fact.t()],
-          bindings: bindings_map
+          bindings: Condition.bindings_map()
         }
-  @type bindings_map :: %{required(Condition.variable_name()) => any()}
 end

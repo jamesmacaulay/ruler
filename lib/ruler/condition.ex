@@ -7,6 +7,8 @@ defmodule Ruler.Condition do
 
   @type t :: {test, test, test}
 
+  @type bindings_map :: %{required(variable_name()) => any()}
+
   @spec const?(test) :: boolean
   defp const?({:const, _}), do: true
   defp const?({:var, _}), do: false
@@ -52,11 +54,23 @@ defmodule Ruler.Condition do
     end)
   end
 
-  @spec bindings(Condition.t(), Fact.t()) :: %{required(variable_name()) => any()}
-  def bindings(condition, fact) do
+  @spec generate_bindings(Condition.t(), Fact.t()) :: bindings_map
+  def generate_bindings(condition, fact) do
     indexed_variables(condition)
     |> Enum.reduce(%{}, fn {field_index, variable_name}, binding_map ->
       Map.put(binding_map, variable_name, elem(fact, field_index))
     end)
   end
+
+  @spec apply_bindings(Condition.t(), bindings_map) :: Fact.t()
+  def apply_bindings({id, attr, val}, bindings) do
+    {
+      apply_bindings_to_field(id, bindings),
+      apply_bindings_to_field(attr, bindings),
+      apply_bindings_to_field(val, bindings)
+    }
+  end
+
+  defp apply_bindings_to_field({:const, value}, _), do: value
+  defp apply_bindings_to_field({:var, name}, bindings), do: bindings.fetch!(name)
 end

@@ -12,38 +12,67 @@ defmodule Ruler.EventContext do
   @type remove_fact :: {:remove_fact, Fact.t()}
   @type add_rule :: {:add_rule, Rule.t()}
   @type operation :: add_fact | remove_fact | add_rule
-
   @type activation_event :: {:activate, Activation.t()} | {:deactivate, Activation.t()}
-
   @type t :: %__MODULE__{
           state: State.t(),
           operation: operation,
           activation_events: [activation_event]
         }
 
+  @spec run_with_effects(State.t(), operation, (t -> t)) :: t
+  def run_with_effects(state, operation, process_func) do
+    new(state, operation)
+    |> process_func.()
+    |> finalize_with_effects()
+  end
+
+  @spec run_without_effects(State.t(), operation, (t -> t)) :: t
+  def run_without_effects(state, operation, process_func) do
+    new(state, operation)
+    |> process_func.()
+    |> finalize_without_effects()
+  end
+
   @spec new(State.t(), operation) :: t
-  def new(state, operation) do
+  defp new(state, operation) do
     %__MODULE__{
       state: state,
       operation: operation
     }
   end
 
-  @spec finalize(t) :: t
-  def finalize(ctx) do
-    # we've been building up this stack-list backwards
-    %{ctx | activation_events: Enum.reverse(ctx.activation_events)}
+  @spec finalize_without_effects(t) :: t
+  defp finalize_without_effects(ctx) do
+    %{
+      ctx
+      | # we've been building up these stack-lists backwards
+        activation_events: Enum.reverse(ctx.activation_events)
+    }
+  end
+
+  @spec finalize_with_effects(t) :: t
+  defp finalize_with_effects(ctx) do
+    ctx = finalize_without_effects(ctx)
+
+    perform_activation_effects(ctx)
+    ctx
+  end
+
+  @spec actions_for_activation(t, Activation.t()) :: [Action.t()]
+  defp actions_for_activation(ctx, activation) do
+    Map.fetch!(ctx.state.rules, activation.rule_id).actions
   end
 
   @spec perform_activation_effects(t) :: :ok
-  def perform_activation_effects(ctx) do
+  defp perform_activation_effects(ctx) do
     ctx.activation_events
     |> Enum.each(fn event = {_, activation} ->
-      rule = Map.fetch!(ctx.state.rules, activation.rule_id)
-
-      Enum.each(rule.actions, fn
+      Enum.each(actions_for_activation(ctx, activation), fn
         {:perform_effects, {module, function_name}} ->
           apply(module, function_name, [ctx, event])
+          nil
+
+        _ ->
           nil
       end)
     end)

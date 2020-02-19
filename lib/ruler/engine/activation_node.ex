@@ -3,6 +3,7 @@ defmodule Ruler.Engine.ActivationNode do
     Activation,
     Condition,
     Engine,
+    EventContext,
     Fact,
     Rule,
     State
@@ -25,7 +26,7 @@ defmodule Ruler.Engine.ActivationNode do
     fetch!(state, State.ActivationNode.ref_from_rule_id(rule_id))
   end
 
-  @spec build(ctx, rule) :: {ctx, ref}
+  @spec build(ctx, rule) :: ctx
   def build(ctx, rule) do
     {ctx, parent_ref} =
       Engine.JoinNode.build_or_share_lineage_for_conditions(ctx, rule.conditions)
@@ -37,12 +38,9 @@ defmodule Ruler.Engine.ActivationNode do
         activations: MapSet.new()
       })
 
-    ctx =
-      ctx
-      |> Engine.JoinNode.add_child_ref!(parent_ref, ref)
-      |> update_new_node_with_matches_from_above(ref)
-
-    {ctx, ref}
+    ctx
+    |> Engine.JoinNode.add_child_ref!(parent_ref, ref)
+    |> update_new_node_with_matches_from_above(ref)
   end
 
   @spec left_activate(ctx, ref, partial_activation, Fact.t(), :add | :remove) :: ctx
@@ -86,11 +84,11 @@ defmodule Ruler.Engine.ActivationNode do
     Engine.JoinNode.update_new_child_node_with_matches_from_above(ctx, parent_ref, ref)
   end
 
-  @spec generate_bindings([Fact.t()], [Condition.t()]) :: Activation.bindings_map()
+  @spec generate_bindings([Fact.t()], [Condition.t()]) :: Condition.bindings_map()
   defp generate_bindings(facts, conditions) do
     Enum.zip(facts, conditions)
     |> Enum.reduce(%{}, fn {fact, condition}, bindings ->
-      Map.merge(bindings, Condition.bindings(condition, fact))
+      Map.merge(bindings, Condition.generate_bindings(condition, fact))
     end)
   end
 

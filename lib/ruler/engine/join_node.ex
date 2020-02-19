@@ -66,6 +66,7 @@ defmodule Ruler.Engine.JoinNode do
             Engine.BetaMemory.build_or_share(ctx, current_join_node_ref)
 
           comparisons = State.JoinNode.comparisons_from_condition(condition, earlier_conditions)
+
           {ctx, amem_ref} = Engine.AlphaMemory.build_or_share(ctx, condition)
 
           {ctx, current_join_node_ref} =
