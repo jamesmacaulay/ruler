@@ -1,6 +1,13 @@
 defmodule Ruler.EngineTest do
   use ExUnit.Case
-  alias Ruler.{Activation, Engine, EventContext, Rule, State}
+
+  alias Ruler.{
+    Activation,
+    Engine,
+    Rule,
+    State
+  }
+
   doctest Ruler.Engine
 
   test "add simple constant test rule, then add matching fact" do
@@ -200,7 +207,7 @@ defmodule Ruler.EngineTest do
     }
 
     expected_activation = %Activation{
-      rule_id: :simple_constant_test,
+      rule_id: :send_echo_when_alice_appears,
       facts: [{"user:1", :name, "Alice"}],
       bindings: %{:id => "user:1"}
     }
@@ -211,12 +218,12 @@ defmodule Ruler.EngineTest do
       |> Map.get(:state)
       |> Engine.add_fact({"user:1", :name, "Alice"})
 
-    assert_received({:echo, ^ctx, {:activate, expected_activation}})
+    assert_received({:echo, ^ctx, {:activate, ^expected_activation}})
 
     ctx =
       ctx.state
       |> Engine.remove_fact({"user:1", :name, "Alice"})
 
-    assert_received({:echo, ^ctx, {:deactivate, expected_activation}})
+    assert_received({:echo, ^ctx, {:deactivate, ^expected_activation}})
   end
 end
