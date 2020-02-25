@@ -24,7 +24,7 @@ defmodule Ruler.Engine.FactInfo do
         fact_info = State.FactInfo.new(source)
 
         %{ctx | state: %{state | facts: Map.put(facts, fact, fact_info)}}
-        |> Engine.ConstantTestNode.activate(state.alpha_top_node, fact, :add)
+        |> Engine.ConstantTestNode.activate(State.ConstantTestNode.top_node_ref(), fact, :add)
     end
   end
 
@@ -36,7 +36,7 @@ defmodule Ruler.Engine.FactInfo do
 
     if State.FactInfo.baseless?(fact_info) do
       %{ctx | state: %{state | facts: Map.delete(facts, fact)}}
-      |> Engine.ConstantTestNode.activate(state.alpha_top_node, fact, :remove)
+      |> Engine.ConstantTestNode.activate(State.ConstantTestNode.top_node_ref(), fact, :remove)
     else
       %{ctx | state: %{state | facts: Map.put(facts, fact, fact_info)}}
     end

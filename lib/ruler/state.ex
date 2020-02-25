@@ -12,9 +12,7 @@ defmodule Ruler.State do
     :alpha_memories,
     :beta_memories,
     :join_nodes,
-    :activation_nodes,
-    :alpha_top_node,
-    :beta_top_node
+    :activation_nodes
   ]
   defstruct [
     :facts,
@@ -23,9 +21,7 @@ defmodule Ruler.State do
     :alpha_memories,
     :beta_memories,
     :join_nodes,
-    :activation_nodes,
-    :alpha_top_node,
-    :beta_top_node
+    :activation_nodes
   ]
 
   @type t :: %__MODULE__{
@@ -36,9 +32,7 @@ defmodule Ruler.State do
           alpha_memories: State.RefMap.t(:alpha_memory_ref, State.AlphaMemory.t()),
           beta_memories: State.RefMap.t(:beta_memory_ref, State.BetaMemory.t()),
           join_nodes: State.RefMap.t(:join_node_ref, State.JoinNode.t()),
-          activation_nodes: %{State.ActivationNode.ref() => State.ActivationNode.t()},
-          alpha_top_node: State.ConstantTestNode.ref(),
-          beta_top_node: State.BetaMemory.ref()
+          activation_nodes: %{State.ActivationNode.ref() => State.ActivationNode.t()}
         }
 
   @spec new :: State.t()
@@ -67,9 +61,7 @@ defmodule Ruler.State do
           }
         ),
       join_nodes: State.RefMap.new(:join_node_ref),
-      activation_nodes: %{},
-      alpha_top_node: {:constant_test_node_ref, 0},
-      beta_top_node: {:beta_memory_ref, 0}
+      activation_nodes: %{}
     }
   end
 end

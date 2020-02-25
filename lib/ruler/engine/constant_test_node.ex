@@ -22,7 +22,7 @@ defmodule Ruler.Engine.ConstantTestNode do
   def build_or_share_lineage_for_condition(ctx, condition) do
     Enum.reduce(
       Condition.constant_tests(condition),
-      {ctx, ctx.state.alpha_top_node},
+      {ctx, State.ConstantTestNode.top_node_ref()},
       fn {field_index, target_value}, {ctx, ref} ->
         build_or_share(ctx, ref, field_index, target_value)
       end

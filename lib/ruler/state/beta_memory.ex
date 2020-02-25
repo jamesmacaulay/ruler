@@ -25,4 +25,9 @@ defmodule Ruler.State.BetaMemory do
       partial_activations: MapSet.new()
     }
   end
+
+  @spec top_node_ref() :: ref
+  def top_node_ref() do
+    {:beta_memory_ref, 0}
+  end
 end

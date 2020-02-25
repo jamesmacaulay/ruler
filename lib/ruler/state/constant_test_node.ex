@@ -23,4 +23,9 @@ defmodule Ruler.State.ConstantTestNode do
     field_index = node.field_index
     field_index == nil || elem(fact, field_index) == node.target_value
   end
+
+  @spec top_node_ref() :: ref
+  def top_node_ref do
+    {:constant_test_node_ref, 0}
+  end
 end

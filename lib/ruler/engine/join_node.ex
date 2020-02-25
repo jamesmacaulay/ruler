@@ -55,7 +55,7 @@ defmodule Ruler.Engine.JoinNode do
     comparisons = State.JoinNode.comparisons_from_condition(first_condition, [])
     {ctx, amem_ref} = Engine.AlphaMemory.build_or_share(ctx, first_condition)
 
-    {ctx, join_ref} = build_or_share(ctx, ctx.state.beta_top_node, amem_ref, comparisons)
+    {ctx, join_ref} = build_or_share(ctx, State.BetaMemory.top_node_ref(), amem_ref, comparisons)
 
     {ctx, join_ref, _} =
       Enum.reduce(
