@@ -59,7 +59,7 @@ defmodule Ruler.Engine do
   @spec done?(t) :: boolean
   def done?(engine) do
     :queue.is_empty(engine.instruction_queue) &&
-      MapSet.equal?(engine.state.target_activations, engine.state.committed_activations)
+      MapSet.equal?(engine.state.proposed_activations, engine.state.committed_activations)
   end
 
   @spec choose_from_conflict_set(t) :: activation_event | nil

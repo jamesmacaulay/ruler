@@ -84,13 +84,13 @@ defmodule Ruler.Engine.ActivationNode do
   @spec add_or_remove_activation(engine, Activation.t(), :add | :remove) :: engine
   defp add_or_remove_activation(engine, activation, :add) do
     state = engine.state
-    target_activations = MapSet.put(state.target_activations, activation)
-    %{engine | state: %{state | target_activations: target_activations}}
+    proposed_activations = MapSet.put(state.proposed_activations, activation)
+    %{engine | state: %{state | proposed_activations: proposed_activations}}
   end
 
   defp add_or_remove_activation(engine, activation, :remove) do
     state = engine.state
-    target_activations = MapSet.delete(state.target_activations, activation)
-    %{engine | state: %{state | target_activations: target_activations}}
+    proposed_activations = MapSet.delete(state.proposed_activations, activation)
+    %{engine | state: %{state | proposed_activations: proposed_activations}}
   end
 end

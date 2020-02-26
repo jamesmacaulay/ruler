@@ -37,7 +37,7 @@ defmodule Ruler.EngineTest do
              {:instruction, {:add_rule, rule}}
            ]
 
-    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.proposed_activations == MapSet.new([expected_activation])
     assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
@@ -69,7 +69,7 @@ defmodule Ruler.EngineTest do
              {:instruction, {:add_fact, {"user:1", :name, "Alice"}}}
            ]
 
-    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.proposed_activations == MapSet.new([expected_activation])
     assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
@@ -121,7 +121,7 @@ defmodule Ruler.EngineTest do
              {:instruction, {:add_rule, rule}}
            ]
 
-    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.proposed_activations == MapSet.new([expected_activation])
     assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
@@ -173,7 +173,7 @@ defmodule Ruler.EngineTest do
              {:instruction, {:add_fact, {"user:alice", :follows, "user:bob"}}}
            ]
 
-    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.proposed_activations == MapSet.new([expected_activation])
     assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
@@ -230,7 +230,7 @@ defmodule Ruler.EngineTest do
              {:instruction, {:add_fact, {"user:alice", :follows, "user:bob"}}}
            ]
 
-    assert engine.state.target_activations == MapSet.new([])
+    assert engine.state.proposed_activations == MapSet.new([])
     assert engine.state.committed_activations == MapSet.new([])
   end
 
