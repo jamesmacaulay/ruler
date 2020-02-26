@@ -2,7 +2,7 @@ defmodule Ruler.Engine do
   alias Ruler.{
     Action,
     Activation,
-    Condition,
+    FactTemplate,
     Engine,
     Fact,
     Rule,
@@ -144,8 +144,8 @@ defmodule Ruler.Engine do
         apply(module, function_name, [engine, event])
         engine
 
-      {:imply, pattern}, engine ->
-        fact = Condition.apply_bindings(pattern, activation.bindings)
+      {:imply, template}, engine ->
+        fact = FactTemplate.apply_bindings(template, activation.bindings)
 
         case tag do
           :activate ->

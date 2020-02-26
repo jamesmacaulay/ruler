@@ -1,7 +1,7 @@
 defmodule Ruler.Engine.ActivationNode do
   alias Ruler.{
     Activation,
-    Condition,
+    FactTemplate,
     Engine,
     Fact,
     Rule,
@@ -73,11 +73,11 @@ defmodule Ruler.Engine.ActivationNode do
     Engine.JoinNode.update_new_child_node_with_matches_from_above(engine, parent_ref, ref)
   end
 
-  @spec generate_bindings([Fact.t()], [Condition.t()]) :: Condition.bindings_map()
+  @spec generate_bindings([Fact.t()], [FactTemplate.t()]) :: FactTemplate.bindings_map()
   defp generate_bindings(facts, conditions) do
     Enum.zip(facts, conditions)
     |> Enum.reduce(%{}, fn {fact, condition}, bindings ->
-      Map.merge(bindings, Condition.generate_bindings(condition, fact))
+      Map.merge(bindings, FactTemplate.generate_bindings(condition, fact))
     end)
   end
 

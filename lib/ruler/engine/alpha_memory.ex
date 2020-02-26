@@ -1,6 +1,6 @@
 defmodule Ruler.Engine.AlphaMemory do
   alias Ruler.{
-    Condition,
+    FactTemplate,
     Engine,
     Fact,
     State
@@ -16,7 +16,7 @@ defmodule Ruler.Engine.AlphaMemory do
     State.RefMap.fetch!(state.alpha_memories, ref)
   end
 
-  @spec build_or_share(engine, Condition.t()) :: {engine, ref}
+  @spec build_or_share(engine, FactTemplate.t()) :: {engine, ref}
   def build_or_share(engine, condition) do
     {engine, constant_test_node_ref} =
       Engine.ConstantTestNode.build_or_share_lineage_for_condition(engine, condition)
@@ -77,10 +77,10 @@ defmodule Ruler.Engine.AlphaMemory do
     {%{engine | state: state}, ref}
   end
 
-  @spec activate_on_existing_facts(engine, ref, Condition.t()) :: engine
+  @spec activate_on_existing_facts(engine, ref, FactTemplate.t()) :: engine
   defp activate_on_existing_facts(engine, ref, condition) do
     Enum.reduce(Map.keys(engine.state.facts), engine, fn fact, engine ->
-      if Condition.constant_tests_match_fact?(condition, fact) do
+      if FactTemplate.constant_tests_match_fact?(condition, fact) do
         activate(engine, ref, fact, :add)
       else
         engine
@@ -91,7 +91,7 @@ defmodule Ruler.Engine.AlphaMemory do
   @spec add_new_alpha_memory_to_constant_test_node(
           engine,
           Engine.ConstantTestNode.ref(),
-          Condition.t()
+          FactTemplate.t()
         ) ::
           {engine, ref}
   defp add_new_alpha_memory_to_constant_test_node(engine, constant_test_node_ref, condition) do

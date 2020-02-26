@@ -1,4 +1,4 @@
-defmodule Ruler.Condition do
+defmodule Ruler.FactTemplate do
   @type variable_name :: atom() | String.t()
   @type variable :: {:var, variable_name}
   @type constant :: {:const, term}
@@ -47,22 +47,22 @@ defmodule Ruler.Condition do
   end
 
   @spec constant_tests_match_fact?(t, Fact.t()) :: boolean
-  def constant_tests_match_fact?(condition, fact) do
-    constant_tests(condition)
+  def constant_tests_match_fact?(template, fact) do
+    constant_tests(template)
     |> Enum.all?(fn {field_index, constant_value} ->
       elem(fact, field_index) == constant_value
     end)
   end
 
-  @spec generate_bindings(Condition.t(), Fact.t()) :: bindings_map
-  def generate_bindings(condition, fact) do
-    indexed_variables(condition)
+  @spec generate_bindings(FactTemplate.t(), Fact.t()) :: bindings_map
+  def generate_bindings(template, fact) do
+    indexed_variables(template)
     |> Enum.reduce(%{}, fn {field_index, variable_name}, binding_map ->
       Map.put(binding_map, variable_name, elem(fact, field_index))
     end)
   end
 
-  @spec apply_bindings(Condition.t(), bindings_map) :: Fact.t()
+  @spec apply_bindings(FactTemplate.t(), bindings_map) :: Fact.t()
   def apply_bindings({id, attr, val}, bindings) do
     {
       apply_bindings_to_field(id, bindings),

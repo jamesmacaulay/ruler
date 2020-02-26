@@ -1,6 +1,6 @@
 defmodule Ruler.State.JoinNode do
   alias Ruler.{
-    Condition,
+    FactTemplate,
     Fact,
     State
   }
@@ -41,9 +41,9 @@ defmodule Ruler.State.JoinNode do
     end
   end
 
-  @spec comparisons_from_condition(Condition.t(), [Condition.t()]) :: [Comparison.t()]
+  @spec comparisons_from_condition(FactTemplate.t(), [FactTemplate.t()]) :: [Comparison.t()]
   def comparisons_from_condition(condition, earlier_conditions) do
-    Condition.indexed_variables(condition)
+    FactTemplate.indexed_variables(condition)
     |> Enum.reduce([], fn {field_index, variable_name}, result ->
       matching_earlier_indexes =
         earlier_conditions
@@ -51,7 +51,7 @@ defmodule Ruler.State.JoinNode do
         |> Enum.find_value(fn {earlier_condition, earlier_condition_index} ->
           matching_earlier_indexed_variable =
             earlier_condition
-            |> Condition.indexed_variables()
+            |> FactTemplate.indexed_variables()
             |> Enum.find(fn {_earlier_field_index, earlier_variable_name} ->
               variable_name == earlier_variable_name
             end)
