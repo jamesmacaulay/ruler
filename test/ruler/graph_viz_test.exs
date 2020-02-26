@@ -1,6 +1,6 @@
 defmodule Ruler.GraphVizTest do
   use ExUnit.Case
-  alias Ruler.{Engine, GraphViz, Rule, State}
+  alias Ruler.{Engine, GraphViz, Rule}
   doctest Ruler.GraphViz
 
   test "render a network with some facts and a matching complex rule with multiple joins" do
@@ -15,20 +15,15 @@ defmodule Ruler.GraphVizTest do
       actions: []
     }
 
-    state =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
-      |> Map.get(:state)
       |> Engine.add_rule(rule)
-      |> Map.get(:state)
 
-    assert GraphViz.to_dot(state) == """
+    assert GraphViz.to_dot(engine.state) == """
            digraph "Ruler.State" {
              subgraph cluster_0 {
                label="Beta Network";

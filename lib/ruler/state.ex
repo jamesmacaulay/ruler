@@ -1,5 +1,6 @@
 defmodule Ruler.State do
   alias Ruler.{
+    Activation,
     Fact,
     Rule,
     State
@@ -12,7 +13,9 @@ defmodule Ruler.State do
     :alpha_memories,
     :beta_memories,
     :join_nodes,
-    :activation_nodes
+    :activation_nodes,
+    :target_activations,
+    :committed_activations
   ]
   defstruct [
     :facts,
@@ -21,7 +24,9 @@ defmodule Ruler.State do
     :alpha_memories,
     :beta_memories,
     :join_nodes,
-    :activation_nodes
+    :activation_nodes,
+    :target_activations,
+    :committed_activations
   ]
 
   @type t :: %__MODULE__{
@@ -32,8 +37,12 @@ defmodule Ruler.State do
           alpha_memories: State.RefMap.t(:alpha_memory_ref, State.AlphaMemory.t()),
           beta_memories: State.RefMap.t(:beta_memory_ref, State.BetaMemory.t()),
           join_nodes: State.RefMap.t(:join_node_ref, State.JoinNode.t()),
-          activation_nodes: %{State.ActivationNode.ref() => State.ActivationNode.t()}
+          activation_nodes: %{State.ActivationNode.ref() => State.ActivationNode.t()},
+          target_activations: MapSet.t(Activation.t()),
+          committed_activations: MapSet.t(Activation.t())
         }
+
+  @type activation_event :: {:activate, Activation.t()} | {:deactivate, Activation.t()}
 
   @spec new :: State.t()
   def new do
@@ -61,7 +70,22 @@ defmodule Ruler.State do
           }
         ),
       join_nodes: State.RefMap.new(:join_node_ref),
-      activation_nodes: %{}
+      activation_nodes: %{},
+      target_activations: MapSet.new(),
+      committed_activations: MapSet.new()
     }
+  end
+
+  @spec conflict_set(t) :: MapSet.t(activation_event)
+  def conflict_set(state) do
+    activate_events =
+      MapSet.difference(state.target_activations, state.committed_activations)
+      |> MapSet.new(&{:activate, &1})
+
+    deactivate_events =
+      MapSet.difference(state.committed_activations, state.target_activations)
+      |> MapSet.new(&{:deactivate, &1})
+
+    MapSet.union(activate_events, deactivate_events)
   end
 end

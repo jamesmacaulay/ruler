@@ -7,7 +7,7 @@ defmodule Ruler.Engine.AlphaMemory do
   }
 
   @type state :: State.t()
-  @type ctx :: EventContext.t()
+  @type engine :: Engine.t()
   @type mem_data :: State.AlphaMemory.t()
   @type ref :: State.AlphaMemory.ref()
 
@@ -16,33 +16,33 @@ defmodule Ruler.Engine.AlphaMemory do
     State.RefMap.fetch!(state.alpha_memories, ref)
   end
 
-  @spec build_or_share(ctx, Condition.t()) :: {ctx, ref}
-  def build_or_share(ctx, condition) do
-    {ctx, constant_test_node_ref} =
-      Engine.ConstantTestNode.build_or_share_lineage_for_condition(ctx, condition)
+  @spec build_or_share(engine, Condition.t()) :: {engine, ref}
+  def build_or_share(engine, condition) do
+    {engine, constant_test_node_ref} =
+      Engine.ConstantTestNode.build_or_share_lineage_for_condition(engine, condition)
 
-    constant_test_node = Engine.ConstantTestNode.fetch!(ctx.state, constant_test_node_ref)
+    constant_test_node = Engine.ConstantTestNode.fetch!(engine.state, constant_test_node_ref)
 
     case constant_test_node.alpha_memory_ref do
       nil ->
-        add_new_alpha_memory_to_constant_test_node(ctx, constant_test_node_ref, condition)
+        add_new_alpha_memory_to_constant_test_node(engine, constant_test_node_ref, condition)
 
       alpha_memory_ref ->
-        {ctx, alpha_memory_ref}
+        {engine, alpha_memory_ref}
     end
   end
 
-  @spec add_join_node!(ctx, ref, State.JoinNode.ref()) :: ctx
-  def add_join_node!(ctx, amem_ref, join_node_ref) do
-    update!(ctx, amem_ref, fn mem ->
+  @spec add_join_node!(engine, ref, State.JoinNode.ref()) :: engine
+  def add_join_node!(engine, amem_ref, join_node_ref) do
+    update!(engine, amem_ref, fn mem ->
       %{mem | join_node_refs: [join_node_ref | mem.join_node_refs]}
     end)
   end
 
-  @spec activate(ctx, ref, Fact.t(), :add | :remove) :: ctx
-  def activate(ctx, ref, fact, op) do
-    ctx =
-      update!(ctx, ref, fn mem ->
+  @spec activate(engine, ref, Fact.t(), :add | :remove) :: engine
+  def activate(engine, ref, fact, op) do
+    engine =
+      update!(engine, ref, fn mem ->
         case op do
           :add ->
             %{mem | facts: MapSet.put(mem.facts, fact)}
@@ -53,55 +53,55 @@ defmodule Ruler.Engine.AlphaMemory do
       end)
 
     Enum.reduce(
-      fetch!(ctx.state, ref).join_node_refs,
-      ctx,
-      fn join_node_ref, ctx ->
-        Engine.JoinNode.right_activate(ctx, join_node_ref, fact, op)
+      fetch!(engine.state, ref).join_node_refs,
+      engine,
+      fn join_node_ref, engine ->
+        Engine.JoinNode.right_activate(engine, join_node_ref, fact, op)
       end
     )
   end
 
-  @spec update!(ctx, ref, (mem_data -> mem_data)) :: ctx
-  defp update!(ctx, ref, f) do
-    state = ctx.state
+  @spec update!(engine, ref, (mem_data -> mem_data)) :: engine
+  defp update!(engine, ref, f) do
+    state = engine.state
     mems = State.RefMap.update!(state.alpha_memories, ref, f)
     state = %{state | alpha_memories: mems}
-    %{ctx | state: state}
+    %{engine | state: state}
   end
 
-  @spec insert(ctx, mem_data) :: {ctx, ref}
-  defp insert(ctx, mem_data) do
-    state = ctx.state
+  @spec insert(engine, mem_data) :: {engine, ref}
+  defp insert(engine, mem_data) do
+    state = engine.state
     {mems, ref} = State.RefMap.insert(state.alpha_memories, mem_data)
     state = %{state | alpha_memories: mems}
-    {%{ctx | state: state}, ref}
+    {%{engine | state: state}, ref}
   end
 
-  @spec activate_on_existing_facts(ctx, ref, Condition.t()) :: ctx
-  defp activate_on_existing_facts(ctx, ref, condition) do
-    Enum.reduce(Map.keys(ctx.state.facts), ctx, fn fact, ctx ->
+  @spec activate_on_existing_facts(engine, ref, Condition.t()) :: engine
+  defp activate_on_existing_facts(engine, ref, condition) do
+    Enum.reduce(Map.keys(engine.state.facts), engine, fn fact, engine ->
       if Condition.constant_tests_match_fact?(condition, fact) do
-        activate(ctx, ref, fact, :add)
+        activate(engine, ref, fact, :add)
       else
-        ctx
+        engine
       end
     end)
   end
 
   @spec add_new_alpha_memory_to_constant_test_node(
-          ctx,
+          engine,
           Engine.ConstantTestNode.ref(),
           Condition.t()
         ) ::
-          {ctx, ref}
-  defp add_new_alpha_memory_to_constant_test_node(ctx, constant_test_node_ref, condition) do
-    {ctx, mem_ref} = insert(ctx, State.AlphaMemory.new())
+          {engine, ref}
+  defp add_new_alpha_memory_to_constant_test_node(engine, constant_test_node_ref, condition) do
+    {engine, mem_ref} = insert(engine, State.AlphaMemory.new())
 
-    ctx =
-      ctx
+    engine =
+      engine
       |> Engine.ConstantTestNode.update_alpha_memory!(constant_test_node_ref, mem_ref)
       |> activate_on_existing_facts(mem_ref, condition)
 
-    {ctx, mem_ref}
+    {engine, mem_ref}
   end
 end

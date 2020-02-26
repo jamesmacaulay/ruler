@@ -1,16 +1,14 @@
 defmodule Ruler.State.ActivationNode do
   alias Ruler.{
-    Activation,
     State
   }
 
-  @enforce_keys [:parent_ref, :rule_id, :activations]
-  defstruct [:parent_ref, :rule_id, :activations]
+  @enforce_keys [:parent_ref, :rule_id]
+  defstruct [:parent_ref, :rule_id]
 
   @type t :: %__MODULE__{
           parent_ref: State.JoinNode.ref(),
-          rule_id: Rule.id(),
-          activations: MapSet.t(Activation.t())
+          rule_id: Rule.id()
         }
   @type ref :: {:activation_node_ref, Rule.id()}
 

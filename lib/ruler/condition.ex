@@ -72,5 +72,5 @@ defmodule Ruler.Condition do
   end
 
   defp apply_bindings_to_field({:const, value}, _), do: value
-  defp apply_bindings_to_field({:var, name}, bindings), do: bindings.fetch!(name)
+  defp apply_bindings_to_field({:var, name}, bindings), do: Map.fetch!(bindings, name)
 end

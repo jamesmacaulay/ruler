@@ -1,6 +1,5 @@
 defmodule Ruler.GraphViz do
   alias Ruler.{
-    Engine,
     State
   }
 

@@ -4,8 +4,7 @@ defmodule Ruler.EngineTest do
   alias Ruler.{
     Activation,
     Engine,
-    Rule,
-    State
+    Rule
   }
 
   doctest Ruler.Engine
@@ -19,13 +18,10 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    ctx =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_rule(rule)
-      |> Map.get(:state)
       |> Engine.add_fact({"user:1", :name, "Alice"})
-
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :simple_constant_test)
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
@@ -33,8 +29,16 @@ defmodule Ruler.EngineTest do
       bindings: %{:id => "user:1"}
     }
 
-    assert ctx.activation_events == [{:activate, expected_activation}]
-    assert activation_node.activations == MapSet.new([expected_activation])
+    assert engine.log == [
+             {:activation_event, {:activate, expected_activation}},
+             {:fact_was_added, {"user:1", :name, "Alice"}},
+             {:add_fact_source, {"user:1", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:1", :name, "Alice"}}},
+             {:instruction, {:add_rule, rule}}
+           ]
+
+    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
   test "add fact, then add matching simple constant test rule" do
@@ -46,13 +50,10 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    ctx =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_fact({"user:1", :name, "Alice"})
-      |> Map.get(:state)
       |> Engine.add_rule(rule)
-
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :simple_constant_test)
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
@@ -60,8 +61,16 @@ defmodule Ruler.EngineTest do
       bindings: %{:id => "user:1"}
     }
 
-    assert ctx.activation_events == [{:activate, expected_activation}]
-    assert activation_node.activations == MapSet.new([expected_activation])
+    assert engine.log == [
+             {:activation_event, {:activate, expected_activation}},
+             {:instruction, {:add_rule, rule}},
+             {:fact_was_added, {"user:1", :name, "Alice"}},
+             {:add_fact_source, {"user:1", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:1", :name, "Alice"}}}
+           ]
+
+    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
   test "add complex rule with multiple joins, then add facts to match" do
@@ -76,19 +85,13 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    ctx =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_rule(rule)
-      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
-
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :mutual_follow_test)
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -101,8 +104,25 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert ctx.activation_events == [{:activate, expected_activation}]
-    assert activation_node.activations == MapSet.new([expected_activation])
+    assert engine.log == [
+             {:activation_event, {:activate, expected_activation}},
+             {:fact_was_added, {"user:bob", :follows, "user:alice"}},
+             {:add_fact_source, {"user:bob", :follows, "user:alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:bob", :follows, "user:alice"}}},
+             {:fact_was_added, {"user:alice", :name, "Alice"}},
+             {:add_fact_source, {"user:alice", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :name, "Alice"}}},
+             {:fact_was_added, {"user:bob", :name, "Bob"}},
+             {:add_fact_source, {"user:bob", :name, "Bob"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:bob", :name, "Bob"}}},
+             {:fact_was_added, {"user:alice", :follows, "user:bob"}},
+             {:add_fact_source, {"user:alice", :follows, "user:bob"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :follows, "user:bob"}}},
+             {:instruction, {:add_rule, rule}}
+           ]
+
+    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
   test "add facts, then add matching complex rule with multiple joins" do
@@ -117,19 +137,13 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    ctx =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
-      |> Map.get(:state)
       |> Engine.add_rule(rule)
-
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :mutual_follow_test)
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -142,8 +156,25 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert ctx.activation_events == [{:activate, expected_activation}]
-    assert activation_node.activations == MapSet.new([expected_activation])
+    assert engine.log == [
+             {:activation_event, {:activate, expected_activation}},
+             {:instruction, {:add_rule, rule}},
+             {:fact_was_added, {"user:bob", :follows, "user:alice"}},
+             {:add_fact_source, {"user:bob", :follows, "user:alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:bob", :follows, "user:alice"}}},
+             {:fact_was_added, {"user:alice", :name, "Alice"}},
+             {:add_fact_source, {"user:alice", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :name, "Alice"}}},
+             {:fact_was_added, {"user:bob", :name, "Bob"}},
+             {:add_fact_source, {"user:bob", :name, "Bob"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:bob", :name, "Bob"}}},
+             {:fact_was_added, {"user:alice", :follows, "user:bob"}},
+             {:add_fact_source, {"user:alice", :follows, "user:bob"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :follows, "user:bob"}}}
+           ]
+
+    assert engine.state.target_activations == MapSet.new([expected_activation])
+    assert engine.state.committed_activations == MapSet.new([expected_activation])
   end
 
   test "add facts, then add matching complex rule with multiple joins, then remove one of the facts" do
@@ -158,23 +189,16 @@ defmodule Ruler.EngineTest do
       actions: []
     }
 
-    ctx =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Map.get(:state)
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
-      |> Map.get(:state)
       |> Engine.add_rule(rule)
-      |> Map.get(:state)
       |> Engine.remove_fact({"user:alice", :name, "Alice"})
 
-    activation_node = Engine.ActivationNode.fetch_with_rule_id!(ctx.state, :mutual_follow_test)
-
-    expected_removed_activation = %Activation{
+    expected_activation = %Activation{
       rule_id: :mutual_follow_test,
       facts: [
         {"user:alice", :name, "Alice"},
@@ -185,13 +209,34 @@ defmodule Ruler.EngineTest do
       bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
     }
 
-    assert ctx.activation_events == [{:deactivate, expected_removed_activation}]
-    assert activation_node.activations == MapSet.new()
+    assert engine.log == [
+             {:activation_event, {:deactivate, expected_activation}},
+             {:fact_was_removed, {"user:alice", :name, "Alice"}},
+             {:remove_fact_source, {"user:alice", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:remove_fact, {"user:alice", :name, "Alice"}}},
+             {:activation_event, {:activate, expected_activation}},
+             {:instruction, {:add_rule, rule}},
+             {:fact_was_added, {"user:bob", :follows, "user:alice"}},
+             {:add_fact_source, {"user:bob", :follows, "user:alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:bob", :follows, "user:alice"}}},
+             {:fact_was_added, {"user:alice", :name, "Alice"}},
+             {:add_fact_source, {"user:alice", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :name, "Alice"}}},
+             {:fact_was_added, {"user:bob", :name, "Bob"}},
+             {:add_fact_source, {"user:bob", :name, "Bob"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:bob", :name, "Bob"}}},
+             {:fact_was_added, {"user:alice", :follows, "user:bob"}},
+             {:add_fact_source, {"user:alice", :follows, "user:bob"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :follows, "user:bob"}}}
+           ]
+
+    assert engine.state.target_activations == MapSet.new([])
+    assert engine.state.committed_activations == MapSet.new([])
   end
 
   defmodule Effects do
-    def echo(ctx, activation_event) do
-      send(self(), {:echo, ctx, activation_event})
+    def echo(engine, activation_event) do
+      send(self(), {:echo, engine, activation_event})
     end
   end
 
@@ -212,19 +257,18 @@ defmodule Ruler.EngineTest do
       bindings: %{:id => "user:1"}
     }
 
-    ctx =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_rule(rule)
-      |> Map.get(:state)
       |> Engine.add_fact({"user:1", :name, "Alice"})
 
-    assert_received({:echo, ^ctx, {:activate, ^expected_activation}})
+    assert_received({:echo, ^engine, {:activate, ^expected_activation}})
 
-    ctx =
-      ctx.state
+    engine =
+      engine
       |> Engine.remove_fact({"user:1", :name, "Alice"})
 
-    assert_received({:echo, ^ctx, {:deactivate, ^expected_activation}})
+    assert_received({:echo, ^engine, {:deactivate, ^expected_activation}})
   end
 
   test "implications" do
@@ -252,23 +296,21 @@ defmodule Ruler.EngineTest do
     announce_descendents_of_eve = %Rule{
       id: :announce_descendents_of_eve,
       conditions: [
-        {{:var, :x}, {:const, :descendent_of}, {:const, :eve}}
+        {{:var, :x}, {:const, :descendent_of}, {:const, "eve"}}
       ],
       actions: [
         {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
       ]
     }
 
-    state =
-      State.new()
+    engine =
+      Engine.new()
       |> Engine.add_rule(children_are_descendents)
-      |> Map.get(:state)
       |> Engine.add_rule(ancestry_is_transitive)
-      |> Map.get(:state)
       |> Engine.add_rule(announce_descendents_of_eve)
-      |> Map.get(:state)
+      |> Engine.add_fact({"alice", :child_of, "beatrice"})
 
-    state = Engine.add_fact(state, {"alice", :child_of, "beatrice"}).state
+    state = engine.state
 
     assert MapSet.new(Map.keys(state.facts)) ==
              MapSet.new([
@@ -276,8 +318,8 @@ defmodule Ruler.EngineTest do
                {"alice", :descendent_of, "beatrice"}
              ])
 
-    ctx = Engine.add_fact(state, {"beatrice", :descendent_of, "eve"})
-    state = ctx.state
+    engine = Engine.add_fact(engine, {"beatrice", :descendent_of, "eve"})
+    state = engine.state
 
     assert MapSet.new(Map.keys(state.facts)) ==
              MapSet.new([
@@ -287,24 +329,54 @@ defmodule Ruler.EngineTest do
                {"alice", :descendent_of, "eve"}
              ])
 
-    assert_received(
-      {:echo, ^ctx,
-       {:activate,
-        %Activation{
-          rule_id: :announce_descendents_of_eve,
-          facts: [{"beatrice", :descendent_of, "eve"}],
-          bindings: %{:x => "beatrice"}
-        }}}
-    )
+    alice_becomes_descendent_of_beatrice = %Activation{
+      rule_id: :children_are_descendents,
+      facts: [{"alice", :child_of, "beatrice"}],
+      bindings: %{:x => "alice", :y => "beatrice"}
+    }
 
-    assert_received(
-      {:echo, ^ctx,
-       {:activate,
-        %Activation{
-          rule_id: :announce_descendents_of_eve,
-          facts: [{"alice", :descendent_of, "eve"}],
-          bindings: %{:x => "alice"}
-        }}}
-    )
+    alice_becomes_descendent_of_eve = %Activation{
+      rule_id: :ancestry_is_transitive,
+      facts: [{"alice", :descendent_of, "beatrice"}, {"beatrice", :descendent_of, "eve"}],
+      bindings: %{:x => "alice", :y => "beatrice", :z => "eve"}
+    }
+
+    beatrice_announced_as_descendent_of_eve = %Activation{
+      rule_id: :announce_descendents_of_eve,
+      facts: [{"beatrice", :descendent_of, "eve"}],
+      bindings: %{:x => "beatrice"}
+    }
+
+    alice_announced_as_descendent_of_eve = %Activation{
+      rule_id: :announce_descendents_of_eve,
+      facts: [{"alice", :descendent_of, "eve"}],
+      bindings: %{:x => "alice"}
+    }
+
+    assert_received({:echo, %Engine{}, {:activate, ^beatrice_announced_as_descendent_of_eve}})
+
+    assert_received({:echo, %Engine{}, {:activate, ^alice_announced_as_descendent_of_eve}})
+
+    assert engine.log == [
+             {:activation_event, {:activate, alice_announced_as_descendent_of_eve}},
+             {:fact_was_added, {"alice", :descendent_of, "eve"}},
+             {:add_fact_source, {"alice", :descendent_of, "eve"},
+              {:implied_by, alice_becomes_descendent_of_eve}},
+             {:activation_event, {:activate, alice_becomes_descendent_of_eve}},
+             {:activation_event, {:activate, beatrice_announced_as_descendent_of_eve}},
+             {:fact_was_added, {"beatrice", :descendent_of, "eve"}},
+             {:add_fact_source, {"beatrice", :descendent_of, "eve"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"beatrice", :descendent_of, "eve"}}},
+             {:fact_was_added, {"alice", :descendent_of, "beatrice"}},
+             {:add_fact_source, {"alice", :descendent_of, "beatrice"},
+              {:implied_by, alice_becomes_descendent_of_beatrice}},
+             {:activation_event, {:activate, alice_becomes_descendent_of_beatrice}},
+             {:fact_was_added, {"alice", :child_of, "beatrice"}},
+             {:add_fact_source, {"alice", :child_of, "beatrice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"alice", :child_of, "beatrice"}}},
+             {:instruction, {:add_rule, announce_descendents_of_eve}},
+             {:instruction, {:add_rule, ancestry_is_transitive}},
+             {:instruction, {:add_rule, children_are_descendents}}
+           ]
   end
 end
