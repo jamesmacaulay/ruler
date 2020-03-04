@@ -191,11 +191,9 @@ defmodule Ruler.Engine do
 
   @spec query(t, [Condition.t()]) :: MapSet.t(Activation.t())
   def query(engine, conditions) do
-    rule_id = {:query, :erlang.phash2(conditions)}
-
     temp_engine =
       add_rule(engine, %Rule{
-        id: rule_id,
+        id: {Ruler.Engine, :query},
         conditions: conditions,
         actions: []
       })

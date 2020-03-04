@@ -399,7 +399,7 @@ defmodule Ruler.EngineTest do
            ) ==
              MapSet.new([
                %Activation{
-                 rule_id: {:query, 38_388_213},
+                 rule_id: {Ruler.Engine, :query},
                  facts: [
                    {"user:alice", :name, "Alice"},
                    {"user:bob", :name, "Bob"},
@@ -413,12 +413,12 @@ defmodule Ruler.EngineTest do
     assert Engine.query(engine, conditions([{follower, :follows, followed}])) ==
              MapSet.new([
                %Activation{
-                 rule_id: {:query, 115_676_537},
+                 rule_id: {Ruler.Engine, :query},
                  facts: [{"user:alice", :follows, "user:bob"}],
                  bindings: %{follower: "user:alice", followed: "user:bob"}
                },
                %Activation{
-                 rule_id: {:query, 115_676_537},
+                 rule_id: {Ruler.Engine, :query},
                  facts: [{"user:bob", :follows, "user:alice"}],
                  bindings: %{follower: "user:bob", followed: "user:alice"}
                }
