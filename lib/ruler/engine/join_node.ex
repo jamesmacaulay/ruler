@@ -1,7 +1,9 @@
 defmodule Ruler.Engine.JoinNode do
   alias Ruler.{
+    Condition,
     Engine,
     Fact,
+    FactTemplate,
     State
   }
 
@@ -47,7 +49,7 @@ defmodule Ruler.Engine.JoinNode do
     end)
   end
 
-  @spec build_or_share_lineage_for_conditions(engine, [FactTemplate.t()]) :: {engine, ref}
+  @spec build_or_share_lineage_for_conditions(engine, [Condition.t()]) :: {engine, ref}
   def build_or_share_lineage_for_conditions(engine, conditions) do
     [first_condition | rest_conditions] = conditions
 

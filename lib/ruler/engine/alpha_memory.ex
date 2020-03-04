@@ -16,16 +16,16 @@ defmodule Ruler.Engine.AlphaMemory do
     State.RefMap.fetch!(state.alpha_memories, ref)
   end
 
-  @spec build_or_share(engine, FactTemplate.t()) :: {engine, ref}
-  def build_or_share(engine, condition) do
+  @spec build_or_share(engine, Condition.t()) :: {engine, ref}
+  def build_or_share(engine, {:known, template}) do
     {engine, constant_test_node_ref} =
-      Engine.ConstantTestNode.build_or_share_lineage_for_condition(engine, condition)
+      Engine.ConstantTestNode.build_or_share_lineage_for_template(engine, template)
 
     constant_test_node = Engine.ConstantTestNode.fetch!(engine.state, constant_test_node_ref)
 
     case constant_test_node.alpha_memory_ref do
       nil ->
-        add_new_alpha_memory_to_constant_test_node(engine, constant_test_node_ref, condition)
+        add_new_alpha_memory_to_constant_test_node(engine, constant_test_node_ref, template)
 
       alpha_memory_ref ->
         {engine, alpha_memory_ref}
@@ -78,9 +78,9 @@ defmodule Ruler.Engine.AlphaMemory do
   end
 
   @spec activate_on_existing_facts(engine, ref, FactTemplate.t()) :: engine
-  defp activate_on_existing_facts(engine, ref, condition) do
+  defp activate_on_existing_facts(engine, ref, template) do
     Enum.reduce(Map.keys(engine.state.facts), engine, fn fact, engine ->
-      if FactTemplate.constant_tests_match_fact?(condition, fact) do
+      if FactTemplate.constant_tests_match_fact?(template, fact) do
         activate(engine, ref, fact, :add)
       else
         engine
@@ -94,13 +94,13 @@ defmodule Ruler.Engine.AlphaMemory do
           FactTemplate.t()
         ) ::
           {engine, ref}
-  defp add_new_alpha_memory_to_constant_test_node(engine, constant_test_node_ref, condition) do
+  defp add_new_alpha_memory_to_constant_test_node(engine, constant_test_node_ref, template) do
     {engine, mem_ref} = insert(engine, State.AlphaMemory.new())
 
     engine =
       engine
       |> Engine.ConstantTestNode.update_alpha_memory!(constant_test_node_ref, mem_ref)
-      |> activate_on_existing_facts(mem_ref, condition)
+      |> activate_on_existing_facts(mem_ref, template)
 
     {engine, mem_ref}
   end

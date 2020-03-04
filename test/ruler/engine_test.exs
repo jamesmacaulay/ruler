@@ -7,14 +7,18 @@ defmodule Ruler.EngineTest do
     Rule
   }
 
+  require Engine.Dsl
+  import Engine.Dsl, only: [conditions: 1, imply: 1]
+
   doctest Ruler.Engine
 
   test "add simple constant test rule, then add matching fact" do
     rule = %Rule{
       id: :simple_constant_test,
-      conditions: [
-        {{:var, :id}, {:const, :name}, {:const, "Alice"}}
-      ],
+      conditions:
+        conditions([
+          {id, :name, "Alice"}
+        ]),
       actions: []
     }
 
@@ -44,9 +48,10 @@ defmodule Ruler.EngineTest do
   test "add fact, then add matching simple constant test rule" do
     rule = %Rule{
       id: :simple_constant_test,
-      conditions: [
-        {{:var, :id}, {:const, :name}, {:const, "Alice"}}
-      ],
+      conditions:
+        conditions([
+          {id, :name, "Alice"}
+        ]),
       actions: []
     }
 
@@ -76,12 +81,13 @@ defmodule Ruler.EngineTest do
   test "add complex rule with multiple joins, then add facts to match" do
     rule = %Rule{
       id: :mutual_follow_test,
-      conditions: [
-        {{:var, :alice_id}, {:const, :name}, {:const, "Alice"}},
-        {{:var, :bob_id}, {:const, :name}, {:const, "Bob"}},
-        {{:var, :alice_id}, {:const, :follows}, {:var, :bob_id}},
-        {{:var, :bob_id}, {:const, :follows}, {:var, :alice_id}}
-      ],
+      conditions:
+        conditions([
+          {alice_id, :name, "Alice"},
+          {bob_id, :name, "Bob"},
+          {alice_id, :follows, bob_id},
+          {bob_id, :follows, alice_id}
+        ]),
       actions: []
     }
 
@@ -128,12 +134,13 @@ defmodule Ruler.EngineTest do
   test "add facts, then add matching complex rule with multiple joins" do
     rule = %Rule{
       id: :mutual_follow_test,
-      conditions: [
-        {{:var, :alice_id}, {:const, :name}, {:const, "Alice"}},
-        {{:var, :bob_id}, {:const, :name}, {:const, "Bob"}},
-        {{:var, :alice_id}, {:const, :follows}, {:var, :bob_id}},
-        {{:var, :bob_id}, {:const, :follows}, {:var, :alice_id}}
-      ],
+      conditions:
+        conditions([
+          {alice_id, :name, "Alice"},
+          {bob_id, :name, "Bob"},
+          {alice_id, :follows, bob_id},
+          {bob_id, :follows, alice_id}
+        ]),
       actions: []
     }
 
@@ -180,12 +187,13 @@ defmodule Ruler.EngineTest do
   test "add facts, then add matching complex rule with multiple joins, then remove one of the facts" do
     rule = %Rule{
       id: :mutual_follow_test,
-      conditions: [
-        {{:var, :alice_id}, {:const, :name}, {:const, "Alice"}},
-        {{:var, :bob_id}, {:const, :name}, {:const, "Bob"}},
-        {{:var, :alice_id}, {:const, :follows}, {:var, :bob_id}},
-        {{:var, :bob_id}, {:const, :follows}, {:var, :alice_id}}
-      ],
+      conditions:
+        conditions([
+          {alice_id, :name, "Alice"},
+          {bob_id, :name, "Bob"},
+          {alice_id, :follows, bob_id},
+          {bob_id, :follows, alice_id}
+        ]),
       actions: []
     }
 
@@ -243,9 +251,10 @@ defmodule Ruler.EngineTest do
   test "perform_effects action" do
     rule = %Rule{
       id: :send_echo_when_alice_appears,
-      conditions: [
-        {{:var, :id}, {:const, :name}, {:const, "Alice"}}
-      ],
+      conditions:
+        conditions([
+          {id, :name, "Alice"}
+        ]),
       actions: [
         {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
       ]
@@ -274,30 +283,33 @@ defmodule Ruler.EngineTest do
   test "implications" do
     children_are_descendents = %Rule{
       id: :children_are_descendents,
-      conditions: [
-        {{:var, :x}, {:const, :child_of}, {:var, :y}}
-      ],
+      conditions:
+        conditions([
+          {x, :child_of, y}
+        ]),
       actions: [
-        {:imply, {{:var, :x}, {:const, :descendent_of}, {:var, :y}}}
+        imply({x, :descendent_of, y})
       ]
     }
 
     ancestry_is_transitive = %Rule{
       id: :ancestry_is_transitive,
-      conditions: [
-        {{:var, :x}, {:const, :descendent_of}, {:var, :y}},
-        {{:var, :y}, {:const, :descendent_of}, {:var, :z}}
-      ],
+      conditions:
+        conditions([
+          {x, :descendent_of, y},
+          {y, :descendent_of, z}
+        ]),
       actions: [
-        {:imply, {{:var, :x}, {:const, :descendent_of}, {:var, :z}}}
+        imply({x, :descendent_of, z})
       ]
     }
 
     announce_descendents_of_eve = %Rule{
       id: :announce_descendents_of_eve,
-      conditions: [
-        {{:var, :x}, {:const, :descendent_of}, {:const, "eve"}}
-      ],
+      conditions:
+        conditions([
+          {x, :descendent_of, "eve"}
+        ]),
       actions: [
         {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
       ]

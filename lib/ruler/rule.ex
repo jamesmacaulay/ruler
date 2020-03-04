@@ -5,7 +5,7 @@ defmodule Ruler.Rule do
   @type id :: any
   @type t :: %__MODULE__{
           id: id,
-          conditions: [Ruler.FactTemplate.t()],
+          conditions: [Ruler.Condition.t()],
           actions: [Ruler.Action.t()]
         }
 end

@@ -17,10 +17,10 @@ defmodule Ruler.Engine.ConstantTestNode do
   end
 
   # returns the new state along with the ref of the lowest child created
-  @spec build_or_share_lineage_for_condition(engine, FactTemplate.t()) :: {engine, ref}
-  def build_or_share_lineage_for_condition(engine, condition) do
+  @spec build_or_share_lineage_for_template(engine, FactTemplate.t()) :: {engine, ref}
+  def build_or_share_lineage_for_template(engine, template) do
     Enum.reduce(
-      FactTemplate.constant_tests(condition),
+      FactTemplate.constant_tests(template),
       {engine, State.ConstantTestNode.top_node_ref()},
       fn {field_index, target_value}, {engine, ref} ->
         build_or_share(engine, ref, field_index, target_value)

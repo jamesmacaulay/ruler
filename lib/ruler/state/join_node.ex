@@ -41,16 +41,16 @@ defmodule Ruler.State.JoinNode do
     end
   end
 
-  @spec comparisons_from_condition(FactTemplate.t(), [FactTemplate.t()]) :: [Comparison.t()]
-  def comparisons_from_condition(condition, earlier_conditions) do
-    FactTemplate.indexed_variables(condition)
+  @spec comparisons_from_condition(Condition.t(), [Condition.t()]) :: [Comparison.t()]
+  def comparisons_from_condition({:known, template}, earlier_conditions) do
+    FactTemplate.indexed_variables(template)
     |> Enum.reduce([], fn {field_index, variable_name}, result ->
       matching_earlier_indexes =
         earlier_conditions
         |> Enum.with_index()
-        |> Enum.find_value(fn {earlier_condition, earlier_condition_index} ->
+        |> Enum.find_value(fn {{:known, template}, earlier_condition_index} ->
           matching_earlier_indexed_variable =
-            earlier_condition
+            template
             |> FactTemplate.indexed_variables()
             |> Enum.find(fn {_earlier_field_index, earlier_variable_name} ->
               variable_name == earlier_variable_name
