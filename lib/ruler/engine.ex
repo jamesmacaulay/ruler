@@ -46,6 +46,13 @@ defmodule Ruler.Engine do
     }
   end
 
+  @spec add_instructions(t, [instruction]) :: t
+  def add_instructions(engine, instructions) do
+    instruction_queue = :queue.join(engine.instruction_queue, :queue.from_list(instructions))
+
+    %{engine | instruction_queue: instruction_queue}
+  end
+
   @spec add_instruction(t, instruction) :: t
   def add_instruction(engine, instruction) do
     %{engine | instruction_queue: :queue.in(instruction, engine.instruction_queue)}
@@ -168,35 +175,37 @@ defmodule Ruler.Engine do
     %{engine | state: %{engine.state | committed_activations: committed_activations}}
   end
 
-  @spec add_fact(t, fact) :: t
-  def add_fact(engine, fact) do
+  @spec add_facts(t, [fact]) :: t
+  def add_facts(engine, facts) do
     engine
-    |> add_instruction({:add_fact, fact})
+    |> add_instructions(Enum.map(facts, &{:add_fact, &1}))
     |> run_until_done()
   end
 
-  @spec remove_fact(t, fact) :: t
-  def remove_fact(engine, fact) do
+  @spec remove_facts(t, [fact]) :: t
+  def remove_facts(engine, facts) do
     engine
-    |> add_instruction({:remove_fact, fact})
+    |> add_instructions(Enum.map(facts, &{:remove_fact, &1}))
     |> run_until_done()
   end
 
-  @spec add_rule(t, rule) :: t
-  def add_rule(engine, rule) do
+  @spec add_rules(t, [rule]) :: t
+  def add_rules(engine, rules) do
     engine
-    |> add_instruction({:add_rule, rule})
+    |> add_instructions(Enum.map(rules, &{:add_rule, &1}))
     |> run_until_done()
   end
 
   @spec query(t, [Condition.t()]) :: MapSet.t(Activation.t())
   def query(engine, conditions) do
     temp_engine =
-      add_rule(engine, %Rule{
-        id: {Ruler.Engine, :query},
-        conditions: conditions,
-        actions: []
-      })
+      add_rules(engine, [
+        %Rule{
+          id: {Ruler.Engine, :query},
+          conditions: conditions,
+          actions: []
+        }
+      ])
 
     MapSet.difference(temp_engine.state.committed_activations, engine.state.committed_activations)
   end

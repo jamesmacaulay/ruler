@@ -19,8 +19,8 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_rule(rule)
-      |> Engine.add_fact({"user:1", :name, "Alice"})
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([{"user:1", :name, "Alice"}])
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
@@ -48,8 +48,8 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_fact({"user:1", :name, "Alice"})
-      |> Engine.add_rule(rule)
+      |> Engine.add_facts([{"user:1", :name, "Alice"}])
+      |> Engine.add_rules([rule])
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
@@ -83,11 +83,13 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_rule(rule)
-      |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Engine.add_fact({"user:bob", :follows, "user:alice"})
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([
+        {"user:alice", :follows, "user:bob"},
+        {"user:bob", :name, "Bob"},
+        {"user:alice", :name, "Alice"},
+        {"user:bob", :follows, "user:alice"}
+      ])
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -135,11 +137,13 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Engine.add_fact({"user:bob", :follows, "user:alice"})
-      |> Engine.add_rule(rule)
+      |> Engine.add_facts([
+        {"user:alice", :follows, "user:bob"},
+        {"user:bob", :name, "Bob"},
+        {"user:alice", :name, "Alice"},
+        {"user:bob", :follows, "user:alice"}
+      ])
+      |> Engine.add_rules([rule])
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -187,12 +191,14 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Engine.add_fact({"user:bob", :follows, "user:alice"})
-      |> Engine.add_rule(rule)
-      |> Engine.remove_fact({"user:alice", :name, "Alice"})
+      |> Engine.add_facts([
+        {"user:alice", :follows, "user:bob"},
+        {"user:bob", :name, "Bob"},
+        {"user:alice", :name, "Alice"},
+        {"user:bob", :follows, "user:alice"}
+      ])
+      |> Engine.add_rules([rule])
+      |> Engine.remove_facts([{"user:alice", :name, "Alice"}])
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
@@ -251,14 +257,14 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_rule(rule)
-      |> Engine.add_fact({"user:1", :name, "Alice"})
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([{"user:1", :name, "Alice"}])
 
     assert_received({:echo, ^engine, {:activate, ^expected_activation}})
 
     engine =
       engine
-      |> Engine.remove_fact({"user:1", :name, "Alice"})
+      |> Engine.remove_facts([{"user:1", :name, "Alice"}])
 
     assert_received({:echo, ^engine, {:deactivate, ^expected_activation}})
   end
@@ -293,10 +299,12 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_rule(children_are_descendents)
-      |> Engine.add_rule(ancestry_is_transitive)
-      |> Engine.add_rule(announce_descendents_of_eve)
-      |> Engine.add_fact({"alice", :child_of, "beatrice"})
+      |> Engine.add_rules([
+        children_are_descendents,
+        ancestry_is_transitive,
+        announce_descendents_of_eve
+      ])
+      |> Engine.add_facts([{"alice", :child_of, "beatrice"}])
 
     state = engine.state
 
@@ -306,7 +314,7 @@ defmodule Ruler.EngineTest do
                {"alice", :descendent_of, "beatrice"}
              ])
 
-    engine = Engine.add_fact(engine, {"beatrice", :descendent_of, "eve"})
+    engine = Engine.add_facts(engine, [{"beatrice", :descendent_of, "eve"}])
     state = engine.state
 
     assert MapSet.new(Map.keys(state.facts)) ==
@@ -382,11 +390,13 @@ defmodule Ruler.EngineTest do
 
     engine =
       Engine.new()
-      |> Engine.add_rule(rule)
-      |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Engine.add_fact({"user:bob", :follows, "user:alice"})
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([
+        {"user:alice", :follows, "user:bob"},
+        {"user:bob", :name, "Bob"},
+        {"user:alice", :name, "Alice"},
+        {"user:bob", :follows, "user:alice"}
+      ])
 
     assert Engine.query(
              engine,

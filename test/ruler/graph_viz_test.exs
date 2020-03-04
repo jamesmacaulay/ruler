@@ -21,11 +21,13 @@ defmodule Ruler.GraphVizTest do
 
     engine =
       Engine.new()
-      |> Engine.add_fact({"user:alice", :follows, "user:bob"})
-      |> Engine.add_fact({"user:bob", :name, "Bob"})
-      |> Engine.add_fact({"user:alice", :name, "Alice"})
-      |> Engine.add_fact({"user:bob", :follows, "user:alice"})
-      |> Engine.add_rule(rule)
+      |> Engine.add_facts([
+        {"user:alice", :follows, "user:bob"},
+        {"user:bob", :name, "Bob"},
+        {"user:alice", :name, "Alice"},
+        {"user:bob", :follows, "user:alice"}
+      ])
+      |> Engine.add_rules([rule])
 
     assert GraphViz.to_dot(engine.state) == """
            digraph "Ruler.State" {
