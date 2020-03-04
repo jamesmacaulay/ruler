@@ -3,24 +3,19 @@ defmodule Ruler.EngineTest do
 
   alias Ruler.{
     Activation,
-    Engine,
-    Rule
+    Engine
   }
 
   require Engine.Dsl
-  import Engine.Dsl, only: [conditions: 1, imply: 1]
+  import Engine.Dsl, only: [rule: 2, imply: 1]
 
   doctest Ruler.Engine
 
   test "add simple constant test rule, then add matching fact" do
-    rule = %Rule{
-      id: :simple_constant_test,
-      conditions:
-        conditions([
-          {id, :name, "Alice"}
-        ]),
-      actions: []
-    }
+    rule =
+      rule :simple_constant_test do
+        [{id, :name, "Alice"}] -> []
+      end
 
     engine =
       Engine.new()
@@ -46,14 +41,10 @@ defmodule Ruler.EngineTest do
   end
 
   test "add fact, then add matching simple constant test rule" do
-    rule = %Rule{
-      id: :simple_constant_test,
-      conditions:
-        conditions([
-          {id, :name, "Alice"}
-        ]),
-      actions: []
-    }
+    rule =
+      rule :simple_constant_test do
+        [{id, :name, "Alice"}] -> []
+      end
 
     engine =
       Engine.new()
@@ -79,17 +70,16 @@ defmodule Ruler.EngineTest do
   end
 
   test "add complex rule with multiple joins, then add facts to match" do
-    rule = %Rule{
-      id: :mutual_follow_test,
-      conditions:
-        conditions([
+    rule =
+      rule :mutual_follow_test do
+        [
           {alice_id, :name, "Alice"},
           {bob_id, :name, "Bob"},
           {alice_id, :follows, bob_id},
           {bob_id, :follows, alice_id}
-        ]),
-      actions: []
-    }
+        ] ->
+          []
+      end
 
     engine =
       Engine.new()
@@ -132,17 +122,16 @@ defmodule Ruler.EngineTest do
   end
 
   test "add facts, then add matching complex rule with multiple joins" do
-    rule = %Rule{
-      id: :mutual_follow_test,
-      conditions:
-        conditions([
+    rule =
+      rule :mutual_follow_test do
+        [
           {alice_id, :name, "Alice"},
           {bob_id, :name, "Bob"},
           {alice_id, :follows, bob_id},
           {bob_id, :follows, alice_id}
-        ]),
-      actions: []
-    }
+        ] ->
+          []
+      end
 
     engine =
       Engine.new()
@@ -185,17 +174,16 @@ defmodule Ruler.EngineTest do
   end
 
   test "add facts, then add matching complex rule with multiple joins, then remove one of the facts" do
-    rule = %Rule{
-      id: :mutual_follow_test,
-      conditions:
-        conditions([
+    rule =
+      rule :mutual_follow_test do
+        [
           {alice_id, :name, "Alice"},
           {bob_id, :name, "Bob"},
           {alice_id, :follows, bob_id},
           {bob_id, :follows, alice_id}
-        ]),
-      actions: []
-    }
+        ] ->
+          []
+      end
 
     engine =
       Engine.new()
@@ -249,16 +237,11 @@ defmodule Ruler.EngineTest do
   end
 
   test "perform_effects action" do
-    rule = %Rule{
-      id: :send_echo_when_alice_appears,
-      conditions:
-        conditions([
-          {id, :name, "Alice"}
-        ]),
-      actions: [
-        {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
-      ]
-    }
+    rule =
+      rule :send_echo_when_alice_appears do
+        [{id, :name, "Alice"}] ->
+          [{:perform_effects, {Ruler.EngineTest.Effects, :echo}}]
+      end
 
     expected_activation = %Activation{
       rule_id: :send_echo_when_alice_appears,
@@ -281,39 +264,32 @@ defmodule Ruler.EngineTest do
   end
 
   test "implications" do
-    children_are_descendents = %Rule{
-      id: :children_are_descendents,
-      conditions:
-        conditions([
-          {x, :child_of, y}
-        ]),
-      actions: [
-        imply({x, :descendent_of, y})
-      ]
-    }
+    children_are_descendents =
+      rule :children_are_descendents do
+        [{x, :child_of, y}] ->
+          [
+            imply({x, :descendent_of, y})
+          ]
+      end
 
-    ancestry_is_transitive = %Rule{
-      id: :ancestry_is_transitive,
-      conditions:
-        conditions([
+    ancestry_is_transitive =
+      rule :ancestry_is_transitive do
+        [
           {x, :descendent_of, y},
           {y, :descendent_of, z}
-        ]),
-      actions: [
-        imply({x, :descendent_of, z})
-      ]
-    }
+        ] ->
+          [
+            imply({x, :descendent_of, z})
+          ]
+      end
 
-    announce_descendents_of_eve = %Rule{
-      id: :announce_descendents_of_eve,
-      conditions:
-        conditions([
-          {x, :descendent_of, "eve"}
-        ]),
-      actions: [
-        {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
-      ]
-    }
+    announce_descendents_of_eve =
+      rule :announce_descendents_of_eve do
+        [{x, :descendent_of, "eve"}] ->
+          [
+            {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
+          ]
+      end
 
     engine =
       Engine.new()
