@@ -388,31 +388,40 @@ defmodule Ruler.EngineTest do
       |> Engine.add_fact({"user:alice", :name, "Alice"})
       |> Engine.add_fact({"user:bob", :follows, "user:alice"})
 
-    query_result =
-      Engine.query(
-        engine,
-        conditions([
-          {alice_id, :name, "Alice"},
-          {bob_id, :name, "Bob"},
-          {alice_id, :follows, bob_id},
-          {bob_id, :follows, alice_id}
-        ])
-      )
+    assert Engine.query(
+             engine,
+             conditions([
+               {alice_id, :name, "Alice"},
+               {bob_id, :name, "Bob"},
+               {alice_id, :follows, bob_id},
+               {bob_id, :follows, alice_id}
+             ])
+           ) ==
+             MapSet.new([
+               %Activation{
+                 rule_id: {:query, 38_388_213},
+                 facts: [
+                   {"user:alice", :name, "Alice"},
+                   {"user:bob", :name, "Bob"},
+                   {"user:alice", :follows, "user:bob"},
+                   {"user:bob", :follows, "user:alice"}
+                 ],
+                 bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
+               }
+             ])
 
-    expected_query_result =
-      MapSet.new([
-        %Activation{
-          rule_id: {:query, 38_388_213},
-          facts: [
-            {"user:alice", :name, "Alice"},
-            {"user:bob", :name, "Bob"},
-            {"user:alice", :follows, "user:bob"},
-            {"user:bob", :follows, "user:alice"}
-          ],
-          bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
-        }
-      ])
-
-    assert query_result == expected_query_result
+    assert Engine.query(engine, conditions([{follower, :follows, followed}])) ==
+             MapSet.new([
+               %Activation{
+                 rule_id: {:query, 115_676_537},
+                 facts: [{"user:alice", :follows, "user:bob"}],
+                 bindings: %{follower: "user:alice", followed: "user:bob"}
+               },
+               %Activation{
+                 rule_id: {:query, 115_676_537},
+                 facts: [{"user:bob", :follows, "user:alice"}],
+                 bindings: %{follower: "user:bob", followed: "user:alice"}
+               }
+             ])
   end
 end
