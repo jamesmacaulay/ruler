@@ -7,7 +7,7 @@ defmodule Ruler.EngineTest do
   }
 
   require Engine.Dsl
-  import Engine.Dsl, only: [rule: 2, imply: 1]
+  import Engine.Dsl, only: [rule: 2, conditions: 1, imply: 1]
 
   doctest Ruler.Engine
 
@@ -366,5 +366,53 @@ defmodule Ruler.EngineTest do
              {:instruction, {:add_rule, ancestry_is_transitive}},
              {:instruction, {:add_rule, children_are_descendents}}
            ]
+  end
+
+  test "query after the fact" do
+    rule =
+      rule :mutual_follow_test do
+        [
+          {alice_id, :name, "Alice"},
+          {bob_id, :name, "Bob"},
+          {alice_id, :follows, bob_id},
+          {bob_id, :follows, alice_id}
+        ] ->
+          []
+      end
+
+    engine =
+      Engine.new()
+      |> Engine.add_rule(rule)
+      |> Engine.add_fact({"user:alice", :follows, "user:bob"})
+      |> Engine.add_fact({"user:bob", :name, "Bob"})
+      |> Engine.add_fact({"user:alice", :name, "Alice"})
+      |> Engine.add_fact({"user:bob", :follows, "user:alice"})
+
+    query_result =
+      Engine.query(
+        engine,
+        conditions([
+          {alice_id, :name, "Alice"},
+          {bob_id, :name, "Bob"},
+          {alice_id, :follows, bob_id},
+          {bob_id, :follows, alice_id}
+        ])
+      )
+
+    expected_query_result =
+      MapSet.new([
+        %Activation{
+          rule_id: {:query, 38_388_213},
+          facts: [
+            {"user:alice", :name, "Alice"},
+            {"user:bob", :name, "Bob"},
+            {"user:alice", :follows, "user:bob"},
+            {"user:bob", :follows, "user:alice"}
+          ],
+          bindings: %{alice_id: "user:alice", bob_id: "user:bob"}
+        }
+      ])
+
+    assert query_result == expected_query_result
   end
 end

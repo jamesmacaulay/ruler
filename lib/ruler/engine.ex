@@ -188,4 +188,18 @@ defmodule Ruler.Engine do
     |> add_instruction({:add_rule, rule})
     |> run_until_done()
   end
+
+  @spec query(t, [Condition.t()]) :: MapSet.t(Activation.t())
+  def query(engine, conditions) do
+    rule_id = {:query, :erlang.phash2(conditions)}
+
+    temp_engine =
+      add_rule(engine, %Rule{
+        id: rule_id,
+        conditions: conditions,
+        actions: []
+      })
+
+    MapSet.difference(temp_engine.state.committed_activations, engine.state.committed_activations)
+  end
 end
