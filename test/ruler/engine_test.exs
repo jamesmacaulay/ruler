@@ -7,7 +7,7 @@ defmodule Ruler.EngineTest do
   }
 
   require Engine.Dsl
-  import Engine.Dsl, only: [rule: 2, conditions: 1, imply: 1]
+  import Engine.Dsl, only: [rule: 2, conditions: 1, imply: 1, query: 2]
 
   doctest Ruler.Engine
 
@@ -432,6 +432,42 @@ defmodule Ruler.EngineTest do
                  facts: [{"user:bob", :follows, "user:alice"}],
                  bindings: %{follower: "user:bob", followed: "user:alice"}
                }
+             ])
+  end
+
+  test "query macro" do
+    rule =
+      rule :mutual_follow do
+        [
+          {x, :follows, y},
+          {y, :follows, x}
+        ] ->
+          [
+            imply({x, :mutually_follows, y})
+          ]
+      end
+
+    engine =
+      Engine.new()
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([
+        {"alice", :follows, "bob"},
+        {"bob", :follows, "alice"},
+        {"eve", :follows, "alice"}
+      ])
+
+    follow_pairs =
+      query engine do
+        [
+          {x, :mutually_follows, y}
+        ] ->
+          {x, y}
+      end
+
+    assert follow_pairs ==
+             MapSet.new([
+               {"alice", "bob"},
+               {"bob", "alice"}
              ])
   end
 end

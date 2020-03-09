@@ -24,6 +24,21 @@ defmodule Ruler.Engine.Dsl do
     convert_template(ast)
   end
 
+  defmacro query(engine, do: body = [{:->, _, [[lhs], _]}]) do
+    converted_conditions = convert_conditions(lhs)
+
+    quote do
+      unquote(engine)
+      |> Ruler.Engine.query(unquote(converted_conditions))
+      |> Stream.map(fn activation ->
+        case activation.facts do
+          unquote(body)
+        end
+      end)
+      |> MapSet.new()
+    end
+  end
+
   defp convert_template({:{}, metadata, elements = [_, _, _]}) do
     {:{}, metadata, Enum.map(elements, &convert_top_level_variables/1)}
   end
