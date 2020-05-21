@@ -4,13 +4,13 @@ defmodule Ruler.GraphVizTest do
   doctest Ruler.GraphViz
 
   require Engine.Dsl
-  import Engine.Dsl, only: [conditions: 1]
+  import Engine.Dsl, only: [clauses: 1]
 
   test "render a network with some facts and a matching complex rule with multiple joins" do
     rule = %Rule{
       id: :mutual_follow_test,
-      conditions:
-        conditions([
+      clauses:
+        clauses([
           {alice_id, :name, "Alice"},
           {bob_id, :name, "Bob"},
           {alice_id, :follows, bob_id},

@@ -1,6 +1,7 @@
 defmodule Ruler.Engine.ActivationNode do
   alias Ruler.{
     Activation,
+    Clause,
     Condition,
     FactTemplate,
     Engine,
@@ -26,15 +27,21 @@ defmodule Ruler.Engine.ActivationNode do
     fetch!(state, State.ActivationNode.ref_from_rule_id(rule_id))
   end
 
-  @spec build(engine, rule) :: engine
-  def build(engine, rule) do
+  @spec build_all(engine, rule) :: engine
+  def build_all(engine, rule) do
+    build(engine, rule, Clause.conditions_from_clauses(rule.clauses))
+  end
+
+  @spec build(engine, rule, [Condition.t()]) :: engine
+  def build(engine, rule, conditions) do
     {engine, parent_ref} =
-      Engine.JoinNode.build_or_share_lineage_for_conditions(engine, rule.conditions)
+      Engine.JoinNode.build_or_share_lineage_for_conditions(engine, conditions)
 
     {engine, ref} =
       insert(engine, %State.ActivationNode{
         parent_ref: parent_ref,
-        rule_id: rule.id
+        rule_id: rule.id,
+        conditions: conditions
       })
 
     engine
@@ -45,15 +52,15 @@ defmodule Ruler.Engine.ActivationNode do
   @spec left_activate(engine, ref, partial_activation, Fact.t(), :add | :remove) :: engine
   def left_activate(engine, ref, partial_activation, fact, op) do
     rule_id = State.ActivationNode.rule_id_from_ref(ref)
+    node = fetch!(engine.state, ref)
     facts = Enum.reverse([fact | partial_activation])
-    rule = Map.fetch!(engine.state.rules, rule_id)
 
     add_or_remove_activation(
       engine,
       %Activation{
         rule_id: rule_id,
         facts: facts,
-        bindings: generate_bindings(facts, rule.conditions)
+        bindings: generate_bindings(facts, node.conditions)
       },
       op
     )

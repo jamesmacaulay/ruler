@@ -1,19 +1,19 @@
 defmodule Ruler.Engine.Dsl do
-  defmacro rule(id, do: [{:->, _, [[conditions], actions]}])
-           when is_list(conditions) and is_list(actions) do
-    converted_conditions = convert_conditions(conditions)
+  defmacro rule(id, do: [{:->, _, [[clauses], actions]}])
+           when is_list(clauses) and is_list(actions) do
+    converted_clauses = convert_clauses(clauses)
 
     quote do
       %Ruler.Rule{
         id: unquote(id),
-        conditions: unquote(converted_conditions),
+        clauses: unquote(converted_clauses),
         actions: unquote(actions)
       }
     end
   end
 
-  defmacro conditions(ast) when is_list(ast) do
-    convert_conditions(ast)
+  defmacro clauses(ast) when is_list(ast) do
+    convert_clauses(ast)
   end
 
   defmacro imply(ast = {:{}, _, [_, _, _]}) do
@@ -25,11 +25,11 @@ defmodule Ruler.Engine.Dsl do
   end
 
   defmacro query(engine, do: body = [{:->, _, [[lhs], _]}]) do
-    converted_conditions = convert_conditions(lhs)
+    converted_clauses = convert_clauses(lhs)
 
     quote do
       unquote(engine)
-      |> Ruler.Engine.query(unquote(converted_conditions))
+      |> Ruler.Engine.query(unquote(converted_clauses))
       |> Stream.map(fn activation ->
         case activation.facts do
           unquote(body)
@@ -43,12 +43,12 @@ defmodule Ruler.Engine.Dsl do
     {:{}, metadata, Enum.map(elements, &convert_top_level_variables/1)}
   end
 
-  defp convert_conditions(ast) when is_list(ast) do
-    Enum.map(ast, &convert_condition/1)
+  defp convert_clauses(ast) when is_list(ast) do
+    Enum.map(ast, &convert_clause/1)
   end
 
-  defp convert_condition(ast = {:{}, _, [_, _, _]}) do
-    {:known, convert_template(ast)}
+  defp convert_clause(ast = {:{}, _, [_, _, _]}) do
+    {:condition, {:known, convert_template(ast)}}
   end
 
   defp convert_top_level_variables({:^, [], [{symbol, metadata, atom}]}) when is_atom(atom) do

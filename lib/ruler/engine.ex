@@ -2,6 +2,7 @@ defmodule Ruler.Engine do
   alias Ruler.{
     Action,
     Activation,
+    Clause,
     FactTemplate,
     Engine,
     Fact,
@@ -126,7 +127,7 @@ defmodule Ruler.Engine do
     state = engine.state
 
     %{engine | state: %{state | rules: Map.put(state.rules, rule.id, rule)}}
-    |> Engine.ActivationNode.build(rule)
+    |> Engine.ActivationNode.build_all(rule)
   end
 
   def process_instruction(engine, {:add_fact, fact}) do
@@ -196,13 +197,13 @@ defmodule Ruler.Engine do
     |> run_until_done()
   end
 
-  @spec query(t, [Condition.t()]) :: MapSet.t(Activation.t())
-  def query(engine, conditions) do
+  @spec query(t, [Clause.t()]) :: MapSet.t(Activation.t())
+  def query(engine, clauses) do
     temp_engine =
       add_rules(engine, [
         %Rule{
           id: {Ruler.Engine, :query},
-          conditions: conditions,
+          clauses: clauses,
           actions: []
         }
       ])

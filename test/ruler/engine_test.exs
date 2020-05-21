@@ -7,7 +7,7 @@ defmodule Ruler.EngineTest do
   }
 
   require Engine.Dsl
-  import Engine.Dsl, only: [rule: 2, conditions: 1, imply: 1, query: 2]
+  import Engine.Dsl, only: [rule: 2, clauses: 1, imply: 1, query: 2]
 
   doctest Ruler.Engine
 
@@ -400,7 +400,7 @@ defmodule Ruler.EngineTest do
 
     assert Engine.query(
              engine,
-             conditions([
+             clauses([
                {alice_id, :name, "Alice"},
                {bob_id, :name, "Bob"},
                {alice_id, :follows, bob_id},
@@ -420,7 +420,7 @@ defmodule Ruler.EngineTest do
                }
              ])
 
-    assert Engine.query(engine, conditions([{follower, :follows, followed}])) ==
+    assert Engine.query(engine, clauses([{follower, :follows, followed}])) ==
              MapSet.new([
                %Activation{
                  rule_id: {Ruler.Engine, :query},
