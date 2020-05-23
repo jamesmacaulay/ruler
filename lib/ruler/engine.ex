@@ -127,7 +127,7 @@ defmodule Ruler.Engine do
     state = engine.state
 
     %{engine | state: %{state | rules: Map.put(state.rules, rule.id, rule)}}
-    |> Engine.ActivationNode.build_all(rule)
+    |> Engine.ProductionNode.build(rule)
   end
 
   def process_instruction(engine, {:add_fact, fact}) do

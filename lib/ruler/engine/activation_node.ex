@@ -19,20 +19,23 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec fetch!(state, ref) :: node_data
   def fetch!(state, ref) do
-    Map.fetch!(state.activation_nodes, ref)
+    State.RefMap.fetch!(state.activation_nodes, ref)
   end
 
-  @spec fetch_with_rule_id!(state, Rule.id()) :: node_data
-  def fetch_with_rule_id!(state, rule_id) do
-    fetch!(state, State.ActivationNode.ref_from_rule_id(rule_id))
-  end
-
-  @spec build_all(engine, rule) :: engine
+  @spec build_all(engine, rule) :: {engine, [ref]}
   def build_all(engine, rule) do
-    build(engine, rule, Clause.conditions_from_clauses(rule.clauses))
+    condition_matrix = Clause.condition_matrix_from_clause({:all, rule.clauses})
+
+    {engine, refs} =
+      Enum.reduce(condition_matrix, {engine, []}, fn conditions, {engine, refs} ->
+        {engine, ref} = build(engine, rule, conditions)
+        {engine, [ref | refs]}
+      end)
+
+    {engine, Enum.reverse(refs)}
   end
 
-  @spec build(engine, rule, [Condition.t()]) :: engine
+  @spec build(engine, rule, [Condition.t()]) :: {engine, ref}
   def build(engine, rule, conditions) do
     {engine, parent_ref} =
       Engine.JoinNode.build_or_share_lineage_for_conditions(engine, conditions)
@@ -44,21 +47,23 @@ defmodule Ruler.Engine.ActivationNode do
         conditions: conditions
       })
 
-    engine
-    |> Engine.JoinNode.add_child_ref!(parent_ref, ref)
-    |> update_new_node_with_matches_from_above(ref)
+    engine =
+      engine
+      |> Engine.JoinNode.add_child_ref!(parent_ref, ref)
+      |> update_new_node_with_matches_from_above(ref)
+
+    {engine, ref}
   end
 
   @spec left_activate(engine, ref, partial_activation, Fact.t(), :add | :remove) :: engine
   def left_activate(engine, ref, partial_activation, fact, op) do
-    rule_id = State.ActivationNode.rule_id_from_ref(ref)
     node = fetch!(engine.state, ref)
     facts = Enum.reverse([fact | partial_activation])
 
     add_or_remove_activation(
       engine,
       %Activation{
-        rule_id: rule_id,
+        rule_id: node.rule_id,
         facts: facts,
         bindings: generate_bindings(facts, node.conditions)
       },
@@ -69,8 +74,7 @@ defmodule Ruler.Engine.ActivationNode do
   @spec insert(engine, node_data) :: {engine, ref}
   defp insert(engine, node_data) do
     state = engine.state
-    ref = State.ActivationNode.ref_from_rule_id(node_data.rule_id)
-    nodes = Map.put(state.activation_nodes, ref, node_data)
+    {nodes, ref} = State.RefMap.insert(state.activation_nodes, node_data)
     state = %{state | activation_nodes: nodes}
     {%{engine | state: state}, ref}
   end

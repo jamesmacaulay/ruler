@@ -47,8 +47,28 @@ defmodule Ruler.Engine.Dsl do
     Enum.map(ast, &convert_clause/1)
   end
 
-  defp convert_clause(ast = {:{}, _, [_, _, _]}) do
-    {:condition, {:known, convert_template(ast)}}
+  defp convert_clause(ast = {:|, _, [_, _]}) do
+    {:any, listify_disjunction(ast)}
+  end
+
+  defp convert_clause(ast) when is_list(ast) do
+    {:all, Enum.map(ast, &convert_clause/1)}
+  end
+
+  defp convert_clause(ast) do
+    {:condition, convert_condition(ast)}
+  end
+
+  defp listify_disjunction({:|, _, [lhs, rhs]}) do
+    [convert_clause(lhs) | listify_disjunction(rhs)]
+  end
+
+  defp listify_disjunction(ast) do
+    [convert_clause(ast)]
+  end
+
+  defp convert_condition(ast = {:{}, _, [_, _, _]}) do
+    {:known, convert_template(ast)}
   end
 
   defp convert_top_level_variables({:^, [], [{symbol, metadata, atom}]}) when is_atom(atom) do

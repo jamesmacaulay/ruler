@@ -435,6 +435,72 @@ defmodule Ruler.EngineTest do
              ])
   end
 
+  test "disjunction" do
+    rule =
+      rule :disjunction_test do
+        [
+          {user_id, :type, :user},
+          {user_id, :name, user_name},
+          {user_id, :is_admin, true}
+          | [{:access_overrides, :name, user_name}, {:access_overrides, :active, true}]
+        ] ->
+          []
+      end
+
+    engine =
+      Engine.new()
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([
+        {"user:alice", :type, :user},
+        {"user:alice", :name, "Alice"},
+        {:access_overrides, :name, "Alice"},
+        {:access_overrides, :active, true},
+        {"user:alice", :is_admin, true}
+      ])
+
+    first_expected_activation = %Activation{
+      rule_id: :disjunction_test,
+      facts: [
+        {"user:alice", :type, :user},
+        {"user:alice", :name, "Alice"},
+        {:access_overrides, :name, "Alice"},
+        {:access_overrides, :active, true}
+      ],
+      bindings: %{user_id: "user:alice", user_name: "Alice"}
+    }
+
+    second_expected_activation = %Activation{
+      rule_id: :disjunction_test,
+      facts: [
+        {"user:alice", :type, :user},
+        {"user:alice", :name, "Alice"},
+        {"user:alice", :is_admin, true}
+      ],
+      bindings: %{user_id: "user:alice", user_name: "Alice"}
+    }
+
+    assert engine.log == [
+             {:activation_event, {:activate, second_expected_activation}},
+             {:fact_was_added, {"user:alice", :is_admin, true}},
+             {:add_fact_source, {"user:alice", :is_admin, true}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :is_admin, true}}},
+             {:activation_event, {:activate, first_expected_activation}},
+             {:fact_was_added, {:access_overrides, :active, true}},
+             {:add_fact_source, {:access_overrides, :active, true}, :explicit_assertion},
+             {:instruction, {:add_fact, {:access_overrides, :active, true}}},
+             {:fact_was_added, {:access_overrides, :name, "Alice"}},
+             {:add_fact_source, {:access_overrides, :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {:access_overrides, :name, "Alice"}}},
+             {:fact_was_added, {"user:alice", :name, "Alice"}},
+             {:add_fact_source, {"user:alice", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :name, "Alice"}}},
+             {:fact_was_added, {"user:alice", :type, :user}},
+             {:add_fact_source, {"user:alice", :type, :user}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:alice", :type, :user}}},
+             {:instruction, {:add_rule, rule}}
+           ]
+  end
+
   test "query macro" do
     rule =
       rule :mutual_follow do

@@ -9,7 +9,7 @@ defmodule Ruler.GraphViz do
 
     join_node_refs = State.RefMap.keys(state.join_nodes)
 
-    activation_node_refs = Map.keys(state.activation_nodes)
+    activation_node_refs = State.RefMap.keys(state.activation_nodes)
 
     beta_nodes_declaration =
       Enum.concat([beta_memory_refs, join_node_refs, activation_node_refs])
