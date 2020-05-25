@@ -1,6 +1,6 @@
 defmodule Ruler.Engine.Dsl do
   defmacro rule(id, do: [{:->, _, [[clauses], actions]}])
-           when is_list(clauses) and is_list(actions) do
+           when is_list(actions) do
     converted_clauses = convert_clauses(clauses)
 
     quote do
@@ -12,7 +12,7 @@ defmodule Ruler.Engine.Dsl do
     end
   end
 
-  defmacro clauses(ast) when is_list(ast) do
+  defmacro clauses(ast) do
     convert_clauses(ast)
   end
 
@@ -43,28 +43,24 @@ defmodule Ruler.Engine.Dsl do
     {:{}, metadata, Enum.map(elements, &convert_top_level_variables/1)}
   end
 
-  defp convert_clauses(ast) when is_list(ast) do
-    Enum.map(ast, &convert_clause/1)
-  end
-
-  defp convert_clause(ast = {:|, _, [_, _]}) do
+  defp convert_clauses(ast = {:|, _, [_, _]}) do
     {:any, listify_disjunction(ast)}
   end
 
-  defp convert_clause(ast) when is_list(ast) do
-    {:all, Enum.map(ast, &convert_clause/1)}
+  defp convert_clauses(ast) when is_list(ast) do
+    {:all, Enum.map(ast, &convert_clauses/1)}
   end
 
-  defp convert_clause(ast) do
+  defp convert_clauses(ast) do
     {:condition, convert_condition(ast)}
   end
 
   defp listify_disjunction({:|, _, [lhs, rhs]}) do
-    [convert_clause(lhs) | listify_disjunction(rhs)]
+    [convert_clauses(lhs) | listify_disjunction(rhs)]
   end
 
   defp listify_disjunction(ast) do
-    [convert_clause(ast)]
+    [convert_clauses(ast)]
   end
 
   defp convert_condition(ast = {:{}, _, [_, _, _]}) do

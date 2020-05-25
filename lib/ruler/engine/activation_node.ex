@@ -24,7 +24,7 @@ defmodule Ruler.Engine.ActivationNode do
 
   @spec build_all(engine, rule) :: {engine, [ref]}
   def build_all(engine, rule) do
-    condition_matrix = Clause.condition_matrix_from_clause({:all, rule.clauses})
+    condition_matrix = Clause.condition_matrix_from_clause(rule.clauses)
 
     {engine, refs} =
       Enum.reduce(condition_matrix, {engine, []}, fn conditions, {engine, refs} ->

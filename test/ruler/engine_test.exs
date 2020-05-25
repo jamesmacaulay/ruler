@@ -14,7 +14,7 @@ defmodule Ruler.EngineTest do
   test "add simple constant test rule, then add matching fact" do
     rule =
       rule :simple_constant_test do
-        [{id, :name, "Alice"}] -> []
+        {id, :name, "Alice"} -> []
       end
 
     engine =
@@ -43,7 +43,7 @@ defmodule Ruler.EngineTest do
   test "add fact, then add matching simple constant test rule" do
     rule =
       rule :simple_constant_test do
-        [{id, :name, "Alice"}] -> []
+        {id, :name, "Alice"} -> []
       end
 
     engine =
@@ -245,7 +245,7 @@ defmodule Ruler.EngineTest do
   test "perform_effects action" do
     rule =
       rule :send_echo_when_alice_appears do
-        [{id, :name, "Alice"}] ->
+        {id, :name, "Alice"} ->
           [{:perform_effects, {Ruler.EngineTest.Effects, :echo}}]
       end
 
@@ -272,7 +272,7 @@ defmodule Ruler.EngineTest do
   test "implications" do
     children_are_descendents =
       rule :children_are_descendents do
-        [{x, :child_of, y}] ->
+        {x, :child_of, y} ->
           [
             imply({x, :descendent_of, y})
           ]
@@ -291,7 +291,7 @@ defmodule Ruler.EngineTest do
 
     announce_descendents_of_eve =
       rule :announce_descendents_of_eve do
-        [{x, :descendent_of, "eve"}] ->
+        {x, :descendent_of, "eve"} ->
           [
             {:perform_effects, {Ruler.EngineTest.Effects, :echo}}
           ]
@@ -435,7 +435,37 @@ defmodule Ruler.EngineTest do
              ])
   end
 
-  test "disjunction" do
+  test "simple disjunction on its own" do
+    rule =
+      rule :solo_disjunction_test do
+        {user_id, :name, "Alice"} | {user_id, :name, "Bob"} -> []
+      end
+
+    engine =
+      Engine.new()
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([
+        {"user:1", :name, "Bob"}
+      ])
+
+    expected_activation = %Activation{
+      rule_id: :solo_disjunction_test,
+      facts: [
+        {"user:1", :name, "Bob"}
+      ],
+      bindings: %{user_id: "user:1"}
+    }
+
+    assert engine.log == [
+             {:activation_event, {:activate, expected_activation}},
+             {:fact_was_added, {"user:1", :name, "Bob"}},
+             {:add_fact_source, {"user:1", :name, "Bob"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:1", :name, "Bob"}}},
+             {:instruction, {:add_rule, rule}}
+           ]
+  end
+
+  test "disjunction sharing variables with sibling conditions" do
     rule =
       rule :disjunction_test do
         [
