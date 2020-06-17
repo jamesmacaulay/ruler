@@ -24,6 +24,9 @@ defmodule Ruler.EngineTest do
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
+      conditions: [
+        {:known, {{:var, :id}, {:const, :name}, {:const, "Alice"}}}
+      ],
       facts: [{"user:1", :name, "Alice"}],
       bindings: %{:id => "user:1"}
     }
@@ -53,6 +56,9 @@ defmodule Ruler.EngineTest do
 
     expected_activation = %Activation{
       rule_id: :simple_constant_test,
+      conditions: [
+        {:known, {{:var, :id}, {:const, :name}, {:const, "Alice"}}}
+      ],
       facts: [{"user:1", :name, "Alice"}],
       bindings: %{:id => "user:1"}
     }
@@ -93,6 +99,12 @@ defmodule Ruler.EngineTest do
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
+      conditions: [
+        {:known, {{:var, :alice_id}, {:const, :name}, {:const, "Alice"}}},
+        {:known, {{:var, :bob_id}, {:const, :name}, {:const, "Bob"}}},
+        {:known, {{:var, :alice_id}, {:const, :follows}, {:var, :bob_id}}},
+        {:known, {{:var, :bob_id}, {:const, :follows}, {:var, :alice_id}}}
+      ],
       facts: [
         {"user:alice", :name, "Alice"},
         {"user:bob", :name, "Bob"},
@@ -147,6 +159,12 @@ defmodule Ruler.EngineTest do
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
+      conditions: [
+        {:known, {{:var, :alice_id}, {:const, :name}, {:const, "Alice"}}},
+        {:known, {{:var, :bob_id}, {:const, :name}, {:const, "Bob"}}},
+        {:known, {{:var, :alice_id}, {:const, :follows}, {:var, :bob_id}}},
+        {:known, {{:var, :bob_id}, {:const, :follows}, {:var, :alice_id}}}
+      ],
       facts: [
         {"user:alice", :name, "Alice"},
         {"user:bob", :name, "Bob"},
@@ -202,6 +220,12 @@ defmodule Ruler.EngineTest do
 
     expected_activation = %Activation{
       rule_id: :mutual_follow_test,
+      conditions: [
+        {:known, {{:var, :alice_id}, {:const, :name}, {:const, "Alice"}}},
+        {:known, {{:var, :bob_id}, {:const, :name}, {:const, "Bob"}}},
+        {:known, {{:var, :alice_id}, {:const, :follows}, {:var, :bob_id}}},
+        {:known, {{:var, :bob_id}, {:const, :follows}, {:var, :alice_id}}}
+      ],
       facts: [
         {"user:alice", :name, "Alice"},
         {"user:bob", :name, "Bob"},
@@ -251,6 +275,9 @@ defmodule Ruler.EngineTest do
 
     expected_activation = %Activation{
       rule_id: :send_echo_when_alice_appears,
+      conditions: [
+        {:known, {{:var, :id}, {:const, :name}, {:const, "Alice"}}}
+      ],
       facts: [{"user:1", :name, "Alice"}],
       bindings: %{:id => "user:1"}
     }
@@ -327,24 +354,37 @@ defmodule Ruler.EngineTest do
 
     alice_becomes_descendent_of_beatrice = %Activation{
       rule_id: :children_are_descendents,
+      conditions: [
+        {:known, {{:var, :x}, {:const, :child_of}, {:var, :y}}}
+      ],
       facts: [{"alice", :child_of, "beatrice"}],
       bindings: %{:x => "alice", :y => "beatrice"}
     }
 
     alice_becomes_descendent_of_eve = %Activation{
       rule_id: :ancestry_is_transitive,
+      conditions: [
+        {:known, {{:var, :x}, {:const, :descendent_of}, {:var, :y}}},
+        {:known, {{:var, :y}, {:const, :descendent_of}, {:var, :z}}}
+      ],
       facts: [{"alice", :descendent_of, "beatrice"}, {"beatrice", :descendent_of, "eve"}],
       bindings: %{:x => "alice", :y => "beatrice", :z => "eve"}
     }
 
     beatrice_announced_as_descendent_of_eve = %Activation{
       rule_id: :announce_descendents_of_eve,
+      conditions: [
+        {:known, {{:var, :x}, {:const, :descendent_of}, {:const, "eve"}}}
+      ],
       facts: [{"beatrice", :descendent_of, "eve"}],
       bindings: %{:x => "beatrice"}
     }
 
     alice_announced_as_descendent_of_eve = %Activation{
       rule_id: :announce_descendents_of_eve,
+      conditions: [
+        {:known, {{:var, :x}, {:const, :descendent_of}, {:const, "eve"}}}
+      ],
       facts: [{"alice", :descendent_of, "eve"}],
       bindings: %{:x => "alice"}
     }
@@ -410,6 +450,12 @@ defmodule Ruler.EngineTest do
              MapSet.new([
                %Activation{
                  rule_id: {Ruler.Engine, :query},
+                 conditions: [
+                   {:known, {{:var, :alice_id}, {:const, :name}, {:const, "Alice"}}},
+                   {:known, {{:var, :bob_id}, {:const, :name}, {:const, "Bob"}}},
+                   {:known, {{:var, :alice_id}, {:const, :follows}, {:var, :bob_id}}},
+                   {:known, {{:var, :bob_id}, {:const, :follows}, {:var, :alice_id}}}
+                 ],
                  facts: [
                    {"user:alice", :name, "Alice"},
                    {"user:bob", :name, "Bob"},
@@ -424,11 +470,17 @@ defmodule Ruler.EngineTest do
              MapSet.new([
                %Activation{
                  rule_id: {Ruler.Engine, :query},
+                 conditions: [
+                   {:known, {{:var, :follower}, {:const, :follows}, {:var, :followed}}}
+                 ],
                  facts: [{"user:alice", :follows, "user:bob"}],
                  bindings: %{follower: "user:alice", followed: "user:bob"}
                },
                %Activation{
                  rule_id: {Ruler.Engine, :query},
+                 conditions: [
+                   {:known, {{:var, :follower}, {:const, :follows}, {:var, :followed}}}
+                 ],
                  facts: [{"user:bob", :follows, "user:alice"}],
                  bindings: %{follower: "user:bob", followed: "user:alice"}
                }
@@ -450,6 +502,9 @@ defmodule Ruler.EngineTest do
 
     expected_activation = %Activation{
       rule_id: :solo_disjunction_test,
+      conditions: [
+        {:known, {{:var, :user_id}, {:const, :name}, {:const, "Bob"}}}
+      ],
       facts: [
         {"user:1", :name, "Bob"}
       ],
@@ -490,6 +545,12 @@ defmodule Ruler.EngineTest do
 
     first_expected_activation = %Activation{
       rule_id: :disjunction_test,
+      conditions: [
+        {:known, {{:var, :user_id}, {:const, :type}, {:const, :user}}},
+        {:known, {{:var, :user_id}, {:const, :name}, {:var, :user_name}}},
+        {:known, {{:const, :access_overrides}, {:const, :name}, {:var, :user_name}}},
+        {:known, {{:const, :access_overrides}, {:const, :active}, {:const, true}}}
+      ],
       facts: [
         {"user:alice", :type, :user},
         {"user:alice", :name, "Alice"},
@@ -501,6 +562,11 @@ defmodule Ruler.EngineTest do
 
     second_expected_activation = %Activation{
       rule_id: :disjunction_test,
+      conditions: [
+        {:known, {{:var, :user_id}, {:const, :type}, {:const, :user}}},
+        {:known, {{:var, :user_id}, {:const, :name}, {:var, :user_name}}},
+        {:known, {{:var, :user_id}, {:const, :is_admin}, {:const, true}}}
+      ],
       facts: [
         {"user:alice", :type, :user},
         {"user:alice", :name, "Alice"},

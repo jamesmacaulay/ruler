@@ -64,6 +64,7 @@ defmodule Ruler.Engine.ActivationNode do
       engine,
       %Activation{
         rule_id: node.rule_id,
+        conditions: node.conditions,
         facts: facts,
         bindings: generate_bindings(facts, node.conditions)
       },
