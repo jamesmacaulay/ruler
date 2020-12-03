@@ -16,7 +16,7 @@ defmodule Ruler.State.ConstantTestNode do
           alpha_memory_ref: State.AlphaMemory.ref() | nil,
           child_refs: [State.ConstantTestNode.ref()]
         }
-  @type ref :: {:constant_test_node_ref, State.RefMap.ref()}
+  @type ref :: State.RefMap.ref(:constant_test_node_ref)
 
   @spec matches_fact?(State.ConstantTestNode.t(), Fact.t()) :: boolean
   def matches_fact?(node, fact) do

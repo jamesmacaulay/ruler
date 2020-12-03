@@ -13,7 +13,7 @@ defmodule Ruler.State.AlphaMemory do
           # successors
           beta_node_refs: [State.JoinNode.ref() | State.NegativeNode.ref()]
         }
-  @type ref :: {:alpha_memory_ref, State.RefMap.ref()}
+  @type ref :: State.RefMap.ref(:alpha_memory_ref)
 
   @spec new() :: State.AlphaMemory.t()
   def new() do

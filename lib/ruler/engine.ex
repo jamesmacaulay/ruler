@@ -197,7 +197,7 @@ defmodule Ruler.Engine do
     |> run_until_done()
   end
 
-  @spec query(t, [Clause.t()]) :: MapSet.t(Activation.t())
+  @spec query(t, Clause.t()) :: MapSet.t(Activation.t())
   def query(engine, clauses) do
     temp_engine =
       add_rules(engine, [

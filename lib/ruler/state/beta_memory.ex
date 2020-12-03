@@ -14,7 +14,7 @@ defmodule Ruler.State.BetaMemory do
           # "items":
           partial_activations: MapSet.t(partial_activation)
         }
-  @type ref :: {:beta_memory_ref, State.RefMap.ref()}
+  @type ref :: State.RefMap.ref(:beta_memory_ref)
   @type parent_ref :: State.JoinNode.ref() | State.NegativeNode.ref()
   # only the dummy top node can have negative nodes as children
   @type child_ref :: State.JoinNode.ref() | State.NegativeNode.ref()

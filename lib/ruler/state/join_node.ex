@@ -8,7 +8,7 @@ defmodule Ruler.State.JoinNode do
   @enforce_keys [:parent_ref, :child_refs, :alpha_memory_ref, :comparisons]
   defstruct [:parent_ref, :child_refs, :alpha_memory_ref, :comparisons]
 
-  @type ref :: {:join_node_ref, State.RefMap.ref()}
+  @type ref :: State.RefMap.ref(:join_node_ref)
   @type child_ref ::
           State.BetaMemory.ref() | State.NegativeNode.ref() | State.ActivationNode.ref()
 

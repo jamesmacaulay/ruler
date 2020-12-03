@@ -13,5 +13,5 @@ defmodule Ruler.State.ActivationNode do
           rule_id: Rule.id(),
           conditions: [Condition.t()]
         }
-  @type ref :: {:activation_node_ref, State.RefMap.ref()}
+  @type ref :: State.RefMap.ref(:activation_node_ref)
 end

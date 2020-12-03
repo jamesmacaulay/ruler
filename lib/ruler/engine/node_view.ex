@@ -1,5 +1,5 @@
 defmodule Ruler.Engine.NodeView do
-  alias Ruler.{Clause, Engine, State}
+  alias Ruler.{Engine, State}
 
   @enforce_keys [:engine, :ref]
   defstruct [:engine, :ref]

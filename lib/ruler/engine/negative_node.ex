@@ -1,9 +1,7 @@
 defmodule Ruler.Engine.NegativeNode do
   alias Ruler.{
-    Condition,
     Engine,
     Fact,
-    FactTemplate,
     State
   }
 

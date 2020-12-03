@@ -23,9 +23,13 @@ defmodule Ruler.State.NegativeNode do
 
   @type partial_activation :: [Fact.t()]
   @type negative_join_result :: {}
+  # it has a join node or negative node for a parent, just like beta memory; or it has the dummy top node as a parent
+  @type parent_ref :: State.JoinNode.ref() | State.NegativeNode.ref() | State.BetaMemory.ref()
+  # it acts as its own join node, so it has the same kinds of children as join nodes
+  @type child_ref :: State.BetaMemory.ref() | State.NegativeNode.ref() | ActivationNode.ref()
   @type t :: %__MODULE__{
           parent_ref: parent_ref | nil,
-          child_refs: MapSet.t(State.JoinNode.ref()),
+          child_refs: [child_ref],
           # like a beta memory:
           partial_activations: MapSet.t(partial_activation),
           # and like a join node:
@@ -34,9 +38,5 @@ defmodule Ruler.State.NegativeNode do
           # plus it keeps track of negative join results:
           join_results: MapSet.t(Fact.t())
         }
-  @type ref :: {:negative_node_ref, State.RefMap.ref()}
-  # it has a join node for a parent, just like beta memory
-  @type parent_ref :: State.JoinNode.ref()
-  # it acts as its own join node, so it has the same kinds of children as join nodes
-  @type child_ref :: State.JoinNode.child_ref()
+  @type ref :: State.RefMap.ref(:negative_node_ref)
 end
