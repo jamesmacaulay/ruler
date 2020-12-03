@@ -17,7 +17,7 @@ defmodule Ruler.Engine.AlphaMemory do
   end
 
   @spec build_or_share(engine, Condition.t()) :: {engine, ref}
-  def build_or_share(engine, {:known, template}) do
+  def build_or_share(engine, {tag, template}) when tag in [:known, :not_known] do
     {engine, constant_test_node_ref} =
       Engine.ConstantTestNode.build_or_share_lineage_for_template(engine, template)
 
@@ -32,10 +32,10 @@ defmodule Ruler.Engine.AlphaMemory do
     end
   end
 
-  @spec add_join_node!(engine, ref, State.JoinNode.ref()) :: engine
-  def add_join_node!(engine, amem_ref, join_node_ref) do
+  @spec add_beta_node!(engine, ref, State.JoinNode.ref() | State.NegativeNode.ref()) :: engine
+  def add_beta_node!(engine, amem_ref, beta_node_ref) do
     update!(engine, amem_ref, fn mem ->
-      %{mem | join_node_refs: [join_node_ref | mem.join_node_refs]}
+      %{mem | beta_node_refs: [beta_node_ref | mem.beta_node_refs]}
     end)
   end
 
@@ -53,10 +53,14 @@ defmodule Ruler.Engine.AlphaMemory do
       end)
 
     Enum.reduce(
-      fetch!(engine.state, ref).join_node_refs,
+      fetch!(engine.state, ref).beta_node_refs,
       engine,
-      fn join_node_ref, engine ->
-        Engine.JoinNode.right_activate(engine, join_node_ref, fact, op)
+      fn
+        join_node_ref = {:join_node_ref, _}, engine ->
+          Engine.JoinNode.right_activate(engine, join_node_ref, fact, op)
+
+        negative_node_ref = {:negative_node_ref, _}, engine ->
+          Engine.NegativeNode.right_activate(engine, negative_node_ref, fact, op)
       end
     )
   end

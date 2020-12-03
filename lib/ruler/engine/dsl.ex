@@ -43,6 +43,10 @@ defmodule Ruler.Engine.Dsl do
     {:{}, metadata, Enum.map(elements, &convert_top_level_variables/1)}
   end
 
+  defp convert_clauses({:not, _, clause_ast}) do
+    {:not, convert_clauses(clause_ast)}
+  end
+
   defp convert_clauses(ast = {:|, _, [_, _]}) do
     {:any, listify_disjunction(ast)}
   end

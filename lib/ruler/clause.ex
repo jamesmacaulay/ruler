@@ -7,6 +7,7 @@ defmodule Ruler.Clause do
           {:condition, Condition.t()}
           | {:any, nonempty_list(t)}
           | {:all, [t]}
+          | {:not, t}
 
   # The following function returns a list of lists of conditions.
   # Each inner list represents a conjunction of conditions.
@@ -76,5 +77,29 @@ defmodule Ruler.Clause do
       next = reversed_condition_matrix_from_clause(clause)
       for a <- acc, b <- next, do: b ++ a
     end)
+  end
+
+  defp reversed_condition_matrix_from_clause({:not, {:not, clause}}) do
+    reversed_condition_matrix_from_clause(clause)
+  end
+
+  defp reversed_condition_matrix_from_clause({:not, {:condition, {:known, fact_template}}}) do
+    [[{:not_known, fact_template}]]
+  end
+
+  defp reversed_condition_matrix_from_clause({:not, {:condition, {:not_known, fact_template}}}) do
+    [[{:known, fact_template}]]
+  end
+
+  defp reversed_condition_matrix_from_clause({:not, {:any, clauses}}) do
+    reversed_condition_matrix_from_clause(
+      {:all, Enum.map(clauses, fn clause -> {:not, clause} end)}
+    )
+  end
+
+  defp reversed_condition_matrix_from_clause({:not, {:all, clauses}}) do
+    reversed_condition_matrix_from_clause(
+      {:any, Enum.map(clauses, fn clause -> {:not, clause} end)}
+    )
   end
 end

@@ -5,6 +5,7 @@ defmodule Ruler.Condition do
 
   @type t ::
           {:known, FactTemplate.t()}
+          | {:not_known, FactTemplate.t()}
 
   @spec generate_bindings(Condition.t(), Fact.t()) :: FactTemplate.bindings_map()
   def generate_bindings({:known, template}, fact) do

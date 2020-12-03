@@ -4,14 +4,14 @@ defmodule Ruler.State.AlphaMemory do
     State
   }
 
-  @enforce_keys [:facts, :join_node_refs]
-  defstruct [:facts, :join_node_refs]
+  @enforce_keys [:facts, :beta_node_refs]
+  defstruct [:facts, :beta_node_refs]
 
   @type t :: %__MODULE__{
           # items
           facts: MapSet.t(Fact.t()),
           # successors
-          join_node_refs: [State.JoinNode.ref()]
+          beta_node_refs: [State.JoinNode.ref() | State.NegativeNode.ref()]
         }
   @type ref :: {:alpha_memory_ref, State.RefMap.ref()}
 
@@ -19,7 +19,7 @@ defmodule Ruler.State.AlphaMemory do
   def new() do
     %State.AlphaMemory{
       facts: MapSet.new(),
-      join_node_refs: []
+      beta_node_refs: []
     }
   end
 end

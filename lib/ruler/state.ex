@@ -13,6 +13,7 @@ defmodule Ruler.State do
     :alpha_memories,
     :beta_memories,
     :join_nodes,
+    :negative_nodes,
     :activation_nodes,
     :proposed_activations,
     :committed_activations
@@ -24,6 +25,7 @@ defmodule Ruler.State do
     :alpha_memories,
     :beta_memories,
     :join_nodes,
+    :negative_nodes,
     :activation_nodes,
     :production_nodes,
     :proposed_activations,
@@ -38,6 +40,7 @@ defmodule Ruler.State do
           alpha_memories: State.RefMap.t(:alpha_memory_ref, State.AlphaMemory.t()),
           beta_memories: State.RefMap.t(:beta_memory_ref, State.BetaMemory.t()),
           join_nodes: State.RefMap.t(:join_node_ref, State.JoinNode.t()),
+          negative_nodes: State.RefMap.t(:negative_node_ref, State.NegativeNode.t()),
           activation_nodes: State.RefMap.t(:activation_node_ref, State.ActivationNode.t()),
           production_nodes: %{State.ProductionNode.ref() => State.ProductionNode.t()},
           proposed_activations: MapSet.t(Activation.t()),
@@ -72,6 +75,7 @@ defmodule Ruler.State do
           }
         ),
       join_nodes: State.RefMap.new(:join_node_ref),
+      negative_nodes: State.RefMap.new(:negative_node_ref),
       activation_nodes: State.RefMap.new(:activation_node_ref),
       production_nodes: %{},
       proposed_activations: MapSet.new(),

@@ -393,6 +393,9 @@ defmodule Ruler.EngineTest do
 
     assert_received({:echo, %Engine{}, {:activate, ^alice_announced_as_descendent_of_eve}})
 
+    require IEx
+    IEx.pry()
+
     assert engine.log == [
              {:activation_event, {:activate, alice_announced_as_descendent_of_eve}},
              {:fact_was_added, {"alice", :descendent_of, "eve"}},
@@ -595,6 +598,39 @@ defmodule Ruler.EngineTest do
              {:instruction, {:add_fact, {"user:alice", :type, :user}}},
              {:instruction, {:add_rule, rule}}
            ]
+  end
+
+  test "not clause (negation)" do
+    rule =
+      rule :simple_negation_test do
+        not {id, :name, "Alice"} -> []
+      end
+
+    engine =
+      Engine.new()
+      |> Engine.add_rules([rule])
+      |> Engine.add_facts([{"user:1", :name, "Alice"}])
+
+    first_expected_activation = %Activation{
+      rule_id: :simple_negation_test,
+      conditions: [
+        {:not_known, {{:var, :id}, {:const, :name}, {:const, "Alice"}}}
+      ],
+      facts: [],
+      bindings: %{}
+    }
+
+    assert engine.log == [
+             {:activation_event, {:deactivate, first_expected_activation}},
+             {:fact_was_added, {"user:1", :name, "Alice"}},
+             {:add_fact_source, {"user:1", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:1", :name, "Alice"}}},
+             {:activation_event, {:activate, first_expected_activation}},
+             {:instruction, {:add_rule, rule}}
+           ]
+
+    assert engine.state.proposed_activations == MapSet.new()
+    assert engine.state.committed_activations == MapSet.new()
   end
 
   test "query macro" do

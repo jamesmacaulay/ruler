@@ -36,7 +36,7 @@ defmodule Ruler.Engine.BetaMemory do
     end
   end
 
-  @spec left_activate(engine, ref, partial_activation, Fact.t(), :add | :remove) :: engine
+  @spec left_activate(engine, ref, partial_activation, Fact.t() | nil, :add | :remove) :: engine
   def left_activate(engine, ref, partial_activation, fact, op) do
     partial_activation = [fact | partial_activation]
 
@@ -45,19 +45,31 @@ defmodule Ruler.Engine.BetaMemory do
     |> left_activate_children(ref, partial_activation, op)
   end
 
-  @spec find_child!(state, ref, (mem_data -> boolean)) :: State.JoinNode.ref() | nil
-  def find_child!(state, parent_ref, pred) do
+  @spec find_join_node_child!(state, ref, (State.JoinNode.t() -> boolean)) ::
+          State.JoinNode.ref() | nil
+  def find_join_node_child!(state, parent_ref, pred) do
     parent = fetch!(state, parent_ref)
 
     Enum.find(parent.child_refs, fn child_ref ->
-      pred.(Engine.JoinNode.fetch!(state, child_ref))
+      match?({:join_node_ref, _}, child_ref) && pred.(Engine.JoinNode.fetch!(state, child_ref))
     end)
   end
 
-  @spec add_join_node!(engine, ref, State.JoinNode.ref()) :: engine
-  def add_join_node!(engine, bmem_ref, join_node_ref) do
+  @spec find_negative_node_child!(state, ref, (State.NegativeNode.t() -> boolean)) ::
+          State.NegativeNode.ref() | nil
+  def find_negative_node_child!(state, parent_ref, pred) do
+    parent = fetch!(state, parent_ref)
+
+    Enum.find(parent.child_refs, fn child_ref ->
+      match?({:negative_node_ref, _}, child_ref) &&
+        pred.(Engine.NegativeNode.fetch!(state, child_ref))
+    end)
+  end
+
+  @spec add_child_node!(engine, ref, State.BetaMemory.child_ref()) :: engine
+  def add_child_node!(engine, bmem_ref, child_node_ref) do
     update!(engine, bmem_ref, fn mem ->
-      %{mem | child_refs: MapSet.put(mem.child_refs, join_node_ref)}
+      %{mem | child_refs: MapSet.put(mem.child_refs, child_node_ref)}
     end)
   end
 

@@ -7,15 +7,17 @@ defmodule Ruler.State.BetaMemory do
   @enforce_keys [:parent_ref, :child_refs, :partial_activations]
   defstruct [:parent_ref, :child_refs, :partial_activations]
 
-  @type partial_activation :: [Fact.t()]
+  @type partial_activation :: [Fact.t() | nil]
   @type t :: %__MODULE__{
           parent_ref: parent_ref | nil,
-          child_refs: MapSet.t(State.JoinNode.ref()),
+          child_refs: MapSet.t(child_ref),
           # "items":
           partial_activations: MapSet.t(partial_activation)
         }
   @type ref :: {:beta_memory_ref, State.RefMap.ref()}
-  @type parent_ref :: State.JoinNode.ref()
+  @type parent_ref :: State.JoinNode.ref() | State.NegativeNode.ref()
+  # only the dummy top node can have negative nodes as children
+  @type child_ref :: State.JoinNode.ref() | State.NegativeNode.ref()
 
   @spec new(parent_ref) :: State.BetaMemory.t()
   def new(parent_ref) do

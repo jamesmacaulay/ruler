@@ -3,7 +3,6 @@ defmodule Ruler.Engine.JoinNode do
     Condition,
     Engine,
     Fact,
-    FactTemplate,
     State
   }
 
@@ -11,7 +10,7 @@ defmodule Ruler.Engine.JoinNode do
   @type engine :: Engine.t()
   @type node_data :: State.JoinNode.t()
   @type ref :: State.JoinNode.ref()
-  @type child_ref :: State.BetaMemory.ref() | State.ActivationNode.ref()
+  @type child_ref :: State.JoinNode.child_ref()
   @type partial_activation :: State.BetaMemory.partial_activation()
 
   @spec fetch!(state, ref) :: node_data
@@ -57,7 +56,18 @@ defmodule Ruler.Engine.JoinNode do
     {engine, amem_ref} = Engine.AlphaMemory.build_or_share(engine, first_condition)
 
     {engine, join_ref} =
-      build_or_share(engine, State.BetaMemory.top_node_ref(), amem_ref, comparisons)
+      case first_condition do
+        {:known, _} ->
+          build_or_share(engine, State.BetaMemory.top_node_ref(), amem_ref, comparisons)
+
+        {:not_known, _} ->
+          Engine.NegativeNode.build_or_share(
+            engine,
+            State.BetaMemory.top_node_ref(),
+            amem_ref,
+            comparisons
+          )
+      end
 
     {engine, join_ref, _} =
       Enum.reduce(
@@ -125,7 +135,7 @@ defmodule Ruler.Engine.JoinNode do
           {engine, ref}
   defp build_or_share(engine, parent_ref, amem_ref, comparisons) do
     suitable_child_ref =
-      Engine.BetaMemory.find_child!(engine.state, parent_ref, fn child ->
+      Engine.BetaMemory.find_join_node_child!(engine.state, parent_ref, fn child ->
         child.alpha_memory_ref == amem_ref && child.comparisons == comparisons
       end)
 
@@ -141,8 +151,8 @@ defmodule Ruler.Engine.JoinNode do
 
         engine =
           engine
-          |> Engine.AlphaMemory.add_join_node!(amem_ref, ref)
-          |> Engine.BetaMemory.add_join_node!(parent_ref, ref)
+          |> Engine.AlphaMemory.add_beta_node!(amem_ref, ref)
+          |> Engine.BetaMemory.add_child_node!(parent_ref, ref)
 
         {engine, ref}
 
@@ -169,15 +179,29 @@ defmodule Ruler.Engine.JoinNode do
     end
   end
 
-  @spec left_activate_child(engine, child_ref, partial_activation, Fact.t(), :add | :remove) ::
+  @spec left_activate_child(engine, child_ref, partial_activation, Fact.t() | nil, :add | :remove) ::
           engine
-  defp left_activate_child(engine, child_ref, partial_activation, fact, op) do
+  def left_activate_child(engine, child_ref, partial_activation, fact, op) do
     case child_ref do
       {:beta_memory_ref, _} ->
         Engine.BetaMemory.left_activate(engine, child_ref, partial_activation, fact, op)
 
       {:activation_node_ref, _} ->
         Engine.ActivationNode.left_activate(engine, child_ref, partial_activation, fact, op)
+
+      {:negative_node_ref, _} ->
+        Engine.NegativeNode.left_activate(engine, child_ref, partial_activation, fact, op)
     end
+  end
+
+  @spec find_negative_node_child!(state, ref, (State.NegativeNode.t() -> boolean)) ::
+          State.NegativeNode.ref() | nil
+  def find_negative_node_child!(state, parent_ref, pred) do
+    parent = fetch!(state, parent_ref)
+
+    Enum.find(parent.child_refs, fn child_ref ->
+      match?({:negative_node_ref, _}, child_ref) &&
+        pred.(Engine.NegativeNode.fetch!(state, child_ref))
+    end)
   end
 end

@@ -49,13 +49,21 @@ defmodule Ruler.Engine.ActivationNode do
 
     engine =
       engine
-      |> Engine.JoinNode.add_child_ref!(parent_ref, ref)
+      |> add_child_ref!(parent_ref, ref)
       |> update_new_node_with_matches_from_above(ref)
 
     {engine, ref}
   end
 
-  @spec left_activate(engine, ref, partial_activation, Fact.t(), :add | :remove) :: engine
+  def add_child_ref!(engine, parent_ref = {:join_node_ref, _}, ref) do
+    Engine.JoinNode.add_child_ref!(engine, parent_ref, ref)
+  end
+
+  def add_child_ref!(engine, parent_ref = {:negative_node_ref, _}, ref) do
+    Engine.NegativeNode.add_child_ref!(engine, parent_ref, ref)
+  end
+
+  @spec left_activate(engine, ref, partial_activation, Fact.t() | nil, :add | :remove) :: engine
   def left_activate(engine, ref, partial_activation, fact, op) do
     node = fetch!(engine.state, ref)
     facts = Enum.reverse([fact | partial_activation])
@@ -83,14 +91,24 @@ defmodule Ruler.Engine.ActivationNode do
   @spec update_new_node_with_matches_from_above(engine, ref) :: engine
   defp update_new_node_with_matches_from_above(engine, ref) do
     parent_ref = fetch!(engine.state, ref).parent_ref
-    Engine.JoinNode.update_new_child_node_with_matches_from_above(engine, parent_ref, ref)
+
+    case parent_ref do
+      {:join_node_ref, _} ->
+        Engine.JoinNode.update_new_child_node_with_matches_from_above(engine, parent_ref, ref)
+
+      {:negative_node_ref, _} ->
+        Engine.NegativeNode.update_new_child_node_with_matches_from_above(engine, parent_ref, ref)
+    end
   end
 
   @spec generate_bindings([Fact.t()], [Condition.t()]) :: FactTemplate.bindings_map()
   defp generate_bindings(facts, conditions) do
     Enum.zip(facts, conditions)
     |> Enum.reduce(%{}, fn {fact, condition}, bindings ->
-      Map.merge(bindings, Condition.generate_bindings(condition, fact))
+      case fact do
+        nil -> bindings
+        _ -> Map.merge(bindings, Condition.generate_bindings(condition, fact))
+      end
     end)
   end
 

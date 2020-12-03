@@ -9,11 +9,12 @@ defmodule Ruler.State.JoinNode do
   defstruct [:parent_ref, :child_refs, :alpha_memory_ref, :comparisons]
 
   @type ref :: {:join_node_ref, State.RefMap.ref()}
-  @type child_ref :: State.BetaMemory.ref() | State.ActivationNode.ref()
+  @type child_ref ::
+          State.BetaMemory.ref() | State.NegativeNode.ref() | State.ActivationNode.ref()
 
   @type t :: %__MODULE__{
           parent_ref: State.BetaMemory.ref(),
-          child_refs: [State.JoinNode.child_ref()],
+          child_refs: [child_ref],
           alpha_memory_ref: State.AlphaMemory.ref(),
           comparisons: [Comparison.t()]
         }
@@ -42,13 +43,13 @@ defmodule Ruler.State.JoinNode do
   end
 
   @spec comparisons_from_condition(Condition.t(), [Condition.t()]) :: [Comparison.t()]
-  def comparisons_from_condition({:known, template}, earlier_conditions) do
+  def comparisons_from_condition({_ctr, template}, earlier_conditions) do
     FactTemplate.indexed_variables(template)
     |> Enum.reduce([], fn {field_index, variable_name}, result ->
       matching_earlier_indexes =
         earlier_conditions
         |> Enum.with_index()
-        |> Enum.find_value(fn {{:known, template}, earlier_condition_index} ->
+        |> Enum.find_value(fn {{_ctr, template}, earlier_condition_index} ->
           matching_earlier_indexed_variable =
             template
             |> FactTemplate.indexed_variables()
