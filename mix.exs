@@ -32,12 +32,15 @@ defmodule Ruler.MixProject do
   defp package do
     [
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => @source_url}
+      links: %{"GitHub" => @source_url},
+      exclude_patterns: [~r/\W\.DS_Store$/]
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
-    []
+    [
+      {:ex_doc, "~> 0.14", only: :dev, runtime: false}
+    ]
   end
 end
