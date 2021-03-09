@@ -1,6 +1,8 @@
 # Ruler
 
-**TODO: Add description**
+**This is work-in-progress alpha software, not yet recommended for any purpose!**
+
+Ruler is a forward-chaining rules engine built on an immutable version of the Rete algorithm.
 
 ## Installation
 
