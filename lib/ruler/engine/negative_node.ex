@@ -9,6 +9,7 @@ defmodule Ruler.Engine.NegativeNode do
   @type engine :: Engine.t()
   @type node_data :: State.NegativeNode.t()
   @type ref :: State.NegativeNode.ref()
+  @type parent_ref :: State.NegativeNode.parent_ref()
   @type child_ref :: State.NegativeNode.child_ref()
   @type partial_activation :: State.NegativeNode.partial_activation()
 
@@ -23,7 +24,6 @@ defmodule Ruler.Engine.NegativeNode do
 
     engine
     |> add_or_remove_partial_activation(ref, partial_activation, op)
-    |> compute_join_results(ref, partial_activation, op)
     |> activate_children(ref, partial_activation, op)
   end
 
@@ -32,24 +32,74 @@ defmodule Ruler.Engine.NegativeNode do
     state = engine.state
     node = fetch!(state, ref)
 
-    Enum.reduce(node.partial_activations, engine, fn partial_activation, engine ->
-      compare_and_activate_children(engine, node, partial_activation, fact, op)
+    Enum.reduce(Map.keys(node.partial_activation_result_counts), engine, fn partial_activation,
+                                                                            engine ->
+      compare_and_update_count_and_activate_children(
+        engine,
+        ref,
+        node,
+        partial_activation,
+        fact,
+        op
+      )
     end)
   end
 
-  @spec compare_and_activate_children(
+  @spec compare_and_update_count_and_activate_children(
           engine,
+          ref,
           node_data,
           partial_activation,
           Fact.t(),
           :add | :remove
         ) ::
           engine
-  defp compare_and_activate_children(engine, node, partial_activation, fact, op) do
+  defp compare_and_update_count_and_activate_children(
+         engine,
+         ref,
+         node,
+         partial_activation,
+         fact,
+         op
+       ) do
     if State.JoinNode.perform_join_comparisons(node.comparisons, partial_activation, fact) do
-      Enum.reduce(node.child_refs, engine, fn child_ref, engine ->
-        Engine.JoinNode.left_activate_child(engine, child_ref, partial_activation, fact, op)
-      end)
+      old_count = Map.get(node.partial_activation_result_counts, partial_activation)
+
+      {new_count, must_propagate_activation} =
+        case op do
+          :add when old_count == 0 -> {1, true}
+          :remove when old_count == 1 -> {0, true}
+          :add when old_count > 0 -> {old_count + 1, false}
+          :remove when old_count > 1 -> {old_count - 1, false}
+        end
+
+      node = %{
+        node
+        | partial_activation_result_counts:
+            Map.put(node.partial_activation_result_counts, partial_activation, new_count)
+      }
+
+      engine = update!(engine, ref, fn _ -> node end)
+
+      if must_propagate_activation do
+        inverse_op =
+          case op do
+            :add -> :remove
+            :remove -> :add
+          end
+
+        Enum.reduce(node.child_refs, engine, fn child_ref, engine ->
+          Engine.JoinNode.left_activate_child(
+            engine,
+            child_ref,
+            partial_activation,
+            nil,
+            inverse_op
+          )
+        end)
+      else
+        engine
+      end
     else
       engine
     end
@@ -59,45 +109,23 @@ defmodule Ruler.Engine.NegativeNode do
           engine
   defp add_or_remove_partial_activation(engine, ref, partial_activation, :add) do
     update!(engine, ref, fn node ->
-      %{node | partial_activations: MapSet.put(node.partial_activations, partial_activation)}
+      %{
+        node
+        | # if for some reason this partial activation is already in the map
+          # we don't want to overwrite the results count, so we use put_new
+          partial_activation_result_counts:
+            Map.put_new(node.partial_activation_result_counts, partial_activation, 0)
+      }
     end)
   end
 
   defp add_or_remove_partial_activation(engine, ref, partial_activation, :remove) do
     update!(engine, ref, fn node ->
-      %{node | partial_activations: MapSet.delete(node.partial_activations, partial_activation)}
-    end)
-  end
-
-  @spec compute_join_results(engine, ref, partial_activation, :add | :remove) :: engine
-  defp compute_join_results(engine, ref, partial_activation, op) do
-    state = engine.state
-    node = fetch!(state, ref)
-    alpha_memory = Engine.AlphaMemory.fetch!(state, node.alpha_memory_ref)
-
-    Enum.reduce(alpha_memory.facts, engine, fn fact, engine ->
-      if State.JoinNode.perform_join_comparisons(node.comparisons, partial_activation, fact) do
-        case op do
-          :add ->
-            update!(engine, ref, fn node ->
-              %{node | join_results: MapSet.put(node.join_results, fact)}
-            end)
-
-          :remove ->
-            update!(engine, ref, fn node ->
-              %{
-                node
-                | join_results:
-                    node.join_results
-                    |> Enum.reject(fn join_result ->
-                      join_result == partial_activation
-                    end)
-              }
-            end)
-        end
-      else
-        engine
-      end
+      %{
+        node
+        | partial_activation_result_counts:
+            Map.delete(node.partial_activation_result_counts, partial_activation)
+      }
     end)
   end
 
@@ -106,7 +134,7 @@ defmodule Ruler.Engine.NegativeNode do
     state = engine.state
     node = fetch!(state, ref)
 
-    if MapSet.size(node.join_results) == 0 do
+    if Map.get(node.partial_activation_result_counts, partial_activation) == 0 do
       Enum.reduce(node.child_refs, engine, fn child_ref, engine ->
         Engine.JoinNode.left_activate_child(engine, child_ref, partial_activation, nil, op)
       end)
@@ -155,7 +183,7 @@ defmodule Ruler.Engine.NegativeNode do
     end)
   end
 
-  @spec build_or_share(engine, State.BetaMemory.ref(), State.AlphaMemory.ref(), [Comparison.t()]) ::
+  @spec build_or_share(engine, parent_ref, State.AlphaMemory.ref(), [Comparison.t()]) ::
           {engine, ref}
   def build_or_share(engine, parent_ref, amem_ref, comparisons) do
     suitable_child_ref =
@@ -169,6 +197,11 @@ defmodule Ruler.Engine.NegativeNode do
           Engine.JoinNode.find_negative_node_child!(engine.state, parent_ref, fn child ->
             child.alpha_memory_ref == amem_ref && child.comparisons == comparisons
           end)
+
+        {:negative_node_ref, _} ->
+          find_negative_node_child!(engine.state, parent_ref, fn child ->
+            child.alpha_memory_ref == amem_ref && child.comparisons == comparisons
+          end)
       end
 
     case suitable_child_ref do
@@ -177,21 +210,36 @@ defmodule Ruler.Engine.NegativeNode do
           insert(engine, %State.NegativeNode{
             parent_ref: parent_ref,
             child_refs: [],
-            partial_activations: MapSet.new(),
+            partial_activation_result_counts: %{},
             alpha_memory_ref: amem_ref,
             comparisons: comparisons,
-            join_results: MapSet.new()
+            join_result_counts: %{}
           })
 
+        engine = Engine.AlphaMemory.add_beta_node!(engine, amem_ref, ref)
+
         engine =
-          engine
-          |> Engine.AlphaMemory.add_beta_node!(amem_ref, ref)
-          |> Engine.BetaMemory.add_child_node!(parent_ref, ref)
+          case parent_ref do
+            {:beta_memory_ref, _} -> Engine.BetaMemory.add_child_node!(engine, parent_ref, ref)
+            {:join_node_ref, _} -> Engine.JoinNode.add_child_ref!(engine, parent_ref, ref)
+            {:negative_node_ref, _} -> add_child_ref!(engine, parent_ref, ref)
+          end
 
         {engine, ref}
 
       _ ->
         {engine, suitable_child_ref}
     end
+  end
+
+  @spec find_negative_node_child!(state, ref, (State.NegativeNode.t() -> boolean)) ::
+          State.NegativeNode.ref() | nil
+  def find_negative_node_child!(state, parent_ref, pred) do
+    parent = fetch!(state, parent_ref)
+
+    Enum.find(parent.child_refs, fn child_ref ->
+      match?({:negative_node_ref, _}, child_ref) &&
+        pred.(Engine.NegativeNode.fetch!(state, child_ref))
+    end)
   end
 end

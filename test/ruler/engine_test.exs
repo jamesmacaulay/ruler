@@ -393,9 +393,6 @@ defmodule Ruler.EngineTest do
 
     assert_received({:echo, %Engine{}, {:activate, ^alice_announced_as_descendent_of_eve}})
 
-    require IEx
-    IEx.pry()
-
     assert engine.log == [
              {:activation_event, {:activate, alice_announced_as_descendent_of_eve}},
              {:fact_was_added, {"alice", :descendent_of, "eve"}},
@@ -616,7 +613,7 @@ defmodule Ruler.EngineTest do
       conditions: [
         {:not_known, {{:var, :id}, {:const, :name}, {:const, "Alice"}}}
       ],
-      facts: [],
+      facts: [nil],
       bindings: %{}
     }
 
@@ -631,6 +628,48 @@ defmodule Ruler.EngineTest do
 
     assert engine.state.proposed_activations == MapSet.new()
     assert engine.state.committed_activations == MapSet.new()
+  end
+
+  test "simple conjunction with one positive and one negative clause" do
+    rule =
+      rule :simple_conjunction_with_negation_test do
+        [
+          {id, :name, "Alice"},
+          not {id, :size, "small"}
+        ] ->
+          []
+      end
+
+    engine =
+      Engine.new()
+      |> Engine.add_instructions([
+        {:add_rule, rule},
+        {:add_fact, {"user:1", :name, "Alice"}},
+        {:add_fact, {"user:1", :size, "small"}}
+      ])
+      |> Engine.run_until_done()
+
+    first_expected_activation = %Activation{
+      rule_id: :simple_conjunction_with_negation_test,
+      conditions: [
+        {:known, {{:var, :id}, {:const, :name}, {:const, "Alice"}}},
+        {:not_known, {{:var, :id}, {:const, :size}, {:const, "small"}}}
+      ],
+      facts: [{"user:1", :name, "Alice"}, nil],
+      bindings: %{:id => "user:1"}
+    }
+
+    assert engine.log == [
+             {:activation_event, {:deactivate, first_expected_activation}},
+             {:fact_was_added, {"user:1", :size, "small"}},
+             {:add_fact_source, {"user:1", :size, "small"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:1", :size, "small"}}},
+             {:activation_event, {:activate, first_expected_activation}},
+             {:fact_was_added, {"user:1", :name, "Alice"}},
+             {:add_fact_source, {"user:1", :name, "Alice"}, :explicit_assertion},
+             {:instruction, {:add_fact, {"user:1", :name, "Alice"}}},
+             {:instruction, {:add_rule, rule}}
+           ]
   end
 
   test "query macro" do

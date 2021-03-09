@@ -73,22 +73,40 @@ defmodule Ruler.Engine.JoinNode do
       Enum.reduce(
         rest_conditions,
         {engine, join_ref, [first_condition]},
-        fn condition, {engine, current_join_node_ref, earlier_conditions} ->
-          {engine, current_beta_memory_ref} =
-            Engine.BetaMemory.build_or_share(engine, current_join_node_ref)
-
-          comparisons = State.JoinNode.comparisons_from_condition(condition, earlier_conditions)
-
-          {engine, amem_ref} = Engine.AlphaMemory.build_or_share(engine, condition)
-
-          {engine, current_join_node_ref} =
-            build_or_share(engine, current_beta_memory_ref, amem_ref, comparisons)
-
-          {engine, current_join_node_ref, [condition | earlier_conditions]}
-        end
+        &reduce_conditions_into_node_lineage/2
       )
 
     {engine, join_ref}
+  end
+
+  defp reduce_conditions_into_node_lineage(
+         condition = {:known, _},
+         {engine, current_join_node_ref, earlier_conditions}
+       ) do
+    {engine, current_beta_memory_ref} =
+      Engine.BetaMemory.build_or_share(engine, current_join_node_ref)
+
+    comparisons = State.JoinNode.comparisons_from_condition(condition, earlier_conditions)
+
+    {engine, amem_ref} = Engine.AlphaMemory.build_or_share(engine, condition)
+
+    {engine, current_join_node_ref} =
+      build_or_share(engine, current_beta_memory_ref, amem_ref, comparisons)
+
+    {engine, current_join_node_ref, [condition | earlier_conditions]}
+  end
+
+  defp reduce_conditions_into_node_lineage(
+         condition = {:not_known, _},
+         {engine, current_join_node_ref, earlier_conditions}
+       ) do
+    comparisons = State.JoinNode.comparisons_from_condition(condition, earlier_conditions)
+    {engine, amem_ref} = Engine.AlphaMemory.build_or_share(engine, condition)
+
+    {engine, current_join_node_ref} =
+      Engine.NegativeNode.build_or_share(engine, current_join_node_ref, amem_ref, comparisons)
+
+    {engine, current_join_node_ref, [condition | earlier_conditions]}
   end
 
   @spec add_child_ref!(engine, ref, child_ref) :: engine
